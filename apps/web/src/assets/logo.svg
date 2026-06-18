@@ -1,0 +1,66 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 96 96"
+  role="img"
+  aria-labelledby="logo-title logo-desc"
+>
+  <title id="logo-title">AI Manage logo</title>
+  <desc id="logo-desc">A rounded local AI management console mark with connected index nodes.</desc>
+  <defs>
+    <linearGradient id="shell" x1="18" x2="82" y1="12" y2="86">
+      <stop offset="0" stop-color="#aacc00" />
+      <stop offset="0.52" stop-color="#80ed99" />
+      <stop offset="1" stop-color="#57cc99" />
+    </linearGradient>
+    <linearGradient id="accent" x1="28" x2="70" y1="70" y2="24">
+      <stop offset="0" stop-color="#168255" />
+      <stop offset="1" stop-color="#3b82f6" />
+    </linearGradient>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#142033" flood-opacity="0.18" />
+    </filter>
+  </defs>
+
+  <path
+    d="M16 31.5C16 20.73 24.73 12 35.5 12h25C75.58 12 84 20.42 84 35.5v25C84 75.58 75.58 84 60.5 84h-25C24.73 84 16 75.27 16 64.5v-33Z"
+    fill="url(#shell)"
+    filter="url(#soft-shadow)"
+  />
+  <path
+    d="M24 34c0-6.08 4.92-11 11-11h26c6.08 0 11 4.92 11 11v28c0 6.08-4.92 11-11 11H35c-6.08 0-11-4.92-11-11V34Z"
+    fill="#071018"
+    opacity="0.92"
+  />
+  <path d="M30 34.5h36" stroke="#ffffff" stroke-linecap="round" stroke-opacity="0.16" stroke-width="4" />
+  <circle cx="34" cy="34.5" r="2.5" fill="#aacc00" />
+  <circle cx="43" cy="34.5" r="2.5" fill="#80ed99" />
+  <circle cx="52" cy="34.5" r="2.5" fill="#57cc99" />
+
+  <path
+    d="M31 62.5 42.2 43l8.45 15.4L61.9 43 69 62.5"
+    fill="none"
+    stroke="#f8fff8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="7"
+  />
+  <path
+    d="M31 62.5 42.2 43l8.45 15.4L61.9 43 69 62.5"
+    fill="none"
+    stroke="url(#accent)"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="4"
+  />
+  <path
+    d="M37 62.5h25"
+    fill="none"
+    stroke="#80ed99"
+    stroke-linecap="round"
+    stroke-opacity="0.9"
+    stroke-width="4"
+  />
+  <circle cx="42.2" cy="43" r="4.5" fill="#aacc00" stroke="#f8fff8" stroke-width="2" />
+  <circle cx="50.65" cy="58.4" r="4.5" fill="#3b82f6" stroke="#f8fff8" stroke-width="2" />
+  <circle cx="61.9" cy="43" r="4.5" fill="#57cc99" stroke="#f8fff8" stroke-width="2" />
+</svg>

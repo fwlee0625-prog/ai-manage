@@ -1,0 +1,95 @@
+$ds-color-text: #142033;
+$ds-color-text-soft: #344256;
+$ds-color-text-muted: #65738a;
+$ds-color-page: #f5f8ff;
+$ds-color-page-deep: #edf4ff;
+$ds-color-surface: #ffffff;
+$ds-color-surface-soft: #f8fbff;
+$ds-color-border: #dde6f3;
+$ds-color-border-soft: #eaf0f8;
+$ds-color-code-bg: #0f172a;
+$ds-color-code-fg: #e5e7eb;
+
+$ds-color-brand: #aacc00;
+$ds-color-brand-soft: #80ed99;
+$ds-color-brand-deep: #57cc99;
+$ds-color-action: #168255;
+$ds-color-action-hover: #1f9f67;
+$ds-color-action-active: #0f6f46;
+$ds-color-action-soft: #ecfbf2;
+$ds-color-info: #3b82f6;
+$ds-color-warning: #f59e0b;
+$ds-color-danger: #ef4444;
+
+$ds-gradient-brand: linear-gradient(
+  135deg,
+  $ds-color-brand 0%,
+  $ds-color-brand-soft 48%,
+  $ds-color-brand-deep 100%
+);
+$ds-gradient-page: radial-gradient(
+    circle at top left,
+    rgb(128 237 153 / 16%),
+    transparent 34%
+  ),
+  radial-gradient(circle at top right, rgb(59 130 246 / 14%), transparent 28%),
+  $ds-color-page;
+
+$ds-radius-control: 6px;
+$ds-radius-panel: 8px;
+$ds-radius-feature: 10px;
+
+$ds-shadow-panel: 0 10px 30px rgb(20 32 51 / 6%);
+$ds-shadow-hover: 0 14px 36px rgb(20 32 51 / 9%);
+
+$ds-state-active-border: rgb(87 204 153 / 52%);
+$ds-state-active-bg: linear-gradient(90deg, rgb(170 204 0 / 14%), rgb(87 204 153 / 9%)),
+  #f8fff8;
+$ds-state-active-color: $ds-color-action;
+
+$ds-space-1: 4px;
+$ds-space-2: 8px;
+$ds-space-3: 12px;
+$ds-space-4: 16px;
+$ds-space-5: 20px;
+$ds-space-6: 24px;
+
+:root {
+  --ds-color-text: #{$ds-color-text};
+  --ds-color-text-soft: #{$ds-color-text-soft};
+  --ds-color-text-muted: #{$ds-color-text-muted};
+  --ds-color-page: #{$ds-color-page};
+  --ds-color-page-deep: #{$ds-color-page-deep};
+  --ds-color-surface: #{$ds-color-surface};
+  --ds-color-surface-soft: #{$ds-color-surface-soft};
+  --ds-color-border: #{$ds-color-border};
+  --ds-color-border-soft: #{$ds-color-border-soft};
+  --ds-color-code-bg: #{$ds-color-code-bg};
+  --ds-color-code-fg: #{$ds-color-code-fg};
+  --ds-color-brand: #{$ds-color-brand};
+  --ds-color-brand-soft: #{$ds-color-brand-soft};
+  --ds-color-brand-deep: #{$ds-color-brand-deep};
+  --ds-color-action: #{$ds-color-action};
+  --ds-color-action-hover: #{$ds-color-action-hover};
+  --ds-color-action-active: #{$ds-color-action-active};
+  --ds-color-action-soft: #{$ds-color-action-soft};
+  --ds-color-info: #{$ds-color-info};
+  --ds-color-warning: #{$ds-color-warning};
+  --ds-color-danger: #{$ds-color-danger};
+  --ds-gradient-brand: #{$ds-gradient-brand};
+  --ds-gradient-page: #{$ds-gradient-page};
+  --ds-radius-control: #{$ds-radius-control};
+  --ds-radius-panel: #{$ds-radius-panel};
+  --ds-radius-feature: #{$ds-radius-feature};
+  --ds-shadow-panel: #{$ds-shadow-panel};
+  --ds-shadow-hover: #{$ds-shadow-hover};
+  --ds-state-active-border: #{$ds-state-active-border};
+  --ds-state-active-bg: #{$ds-state-active-bg};
+  --ds-state-active-color: #{$ds-state-active-color};
+  --ds-space-1: #{$ds-space-1};
+  --ds-space-2: #{$ds-space-2};
+  --ds-space-3: #{$ds-space-3};
+  --ds-space-4: #{$ds-space-4};
+  --ds-space-5: #{$ds-space-5};
+  --ds-space-6: #{$ds-space-6};
+}

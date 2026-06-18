@@ -1,0 +1,18 @@
+{
+  "name": "ai-manage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local read-only visual manager for AI tool configs and session history.",
+  "scripts": {
+    "build": "pnpm -r build",
+    "check": "pnpm -r check",
+    "test": "pnpm -r test",
+    "dev:api": "pnpm --filter @ai-manage/api dev",
+    "dev:web": "pnpm --filter @ai-manage/web dev"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@10.30.3"
+}

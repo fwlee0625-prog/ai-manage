@@ -1,0 +1,41 @@
+:root {
+  --el-color-primary: var(--ds-color-action);
+  --el-color-primary-dark-2: var(--ds-color-action-active);
+  --el-color-primary-light-3: var(--ds-color-action-hover);
+  --el-color-primary-light-5: #65c69a;
+  --el-color-primary-light-7: #a7e3c5;
+  --el-color-primary-light-8: #cdf0dc;
+  --el-color-primary-light-9: var(--ds-color-action-soft);
+  --el-color-success: var(--ds-color-brand-deep);
+  --el-color-warning: var(--ds-color-warning);
+  --el-color-danger: var(--ds-color-danger);
+  --el-border-radius-base: var(--ds-radius-control);
+  --el-border-color: var(--ds-color-border);
+  --el-border-color-light: var(--ds-color-border-soft);
+  --el-fill-color-blank: var(--ds-color-surface);
+  --el-bg-color: var(--ds-color-surface);
+  --el-bg-color-page: var(--ds-color-page);
+  --el-text-color-primary: var(--ds-color-text);
+  --el-text-color-regular: var(--ds-color-text-soft);
+  --el-text-color-secondary: var(--ds-color-text-muted);
+  --el-box-shadow-light: var(--ds-shadow-panel);
+}
+
+.el-card {
+  border-color: var(--ds-color-border-soft);
+  border-radius: var(--ds-radius-panel);
+  box-shadow: var(--ds-shadow-panel);
+}
+
+.el-card__header {
+  border-bottom-color: var(--ds-color-border-soft);
+}
+
+.el-button {
+  font-weight: 600;
+}
+
+.el-table {
+  --el-table-header-bg-color: var(--ds-color-surface-soft);
+  --el-table-row-hover-bg-color: #f3f8ff;
+}
