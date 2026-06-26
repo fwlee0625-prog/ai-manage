@@ -9,6 +9,7 @@ export class PathGuard {
   readonly claudeRoot = resolve(HOME_DIR, '.claude');
   readonly agentsRoot = resolve(HOME_DIR, '.agents');
   readonly dataRoot = DATA_DIR;
+  readonly codexAuthPath = resolve(this.codexRoot, 'auth.json');
   readonly writableConfigFiles = new Set([
     resolve(this.codexRoot, 'config.toml'),
     resolve(this.codexRoot, 'AGENTS.md'),
@@ -30,6 +31,17 @@ export class PathGuard {
     return resolved;
   }
 
+  /** Allows reading SKILL.md files from global roots and caller-provided project skill roots. */
+  assertReadableSkill(filePath: string, extraRoots: string[] = []): string {
+    const resolved = resolve(filePath);
+    const allowedRoots = this.skillRoots(extraRoots);
+    const allowed = resolved.endsWith('/SKILL.md') && allowedRoots.some(root => this.isInside(resolved, root));
+    if (!allowed) {
+      throw new ForbiddenException(`Path is not a readable skill file: ${filePath}`);
+    }
+    return resolved;
+  }
+
   assertWritableConfig(filePath: string): string {
     const resolved = resolve(filePath);
     if (!this.writableConfigFiles.has(resolved)) {
@@ -38,12 +50,22 @@ export class PathGuard {
     return resolved;
   }
 
-  assertWritableSkill(filePath: string): string {
+  assertCodexAuth(filePath = this.codexAuthPath): string {
     const resolved = resolve(filePath);
-    const allowedRoots = [
-      resolve(this.codexRoot, 'skills'),
-      resolve(this.agentsRoot, 'skills'),
-    ];
+    if (resolved !== this.codexAuthPath) {
+      throw new ForbiddenException(`Path is not the Codex auth file: ${filePath}`);
+    }
+    return resolved;
+  }
+
+  assertWritableCodexAuth(filePath = this.codexAuthPath): string {
+    return this.assertCodexAuth(filePath);
+  }
+
+  /** Allows editing SKILL.md files from global roots and caller-provided project skill roots. */
+  assertWritableSkill(filePath: string, extraRoots: string[] = []): string {
+    const resolved = resolve(filePath);
+    const allowedRoots = this.skillRoots(extraRoots);
     const allowed = resolved.endsWith('/SKILL.md') && allowedRoots.some(root => this.isInside(resolved, root));
     if (!allowed) {
       throw new ForbiddenException(`Path is not an editable skill file: ${filePath}`);
@@ -67,5 +89,14 @@ export class PathGuard {
   private isInside(child: string, parent: string): boolean {
     const rel = relative(resolve(parent), child);
     return rel === '' || (!!rel && !rel.startsWith('..') && !rel.startsWith('/'));
+  }
+
+  /** Builds the effective whitelist for skill file operations. */
+  private skillRoots(extraRoots: string[]): string[] {
+    return [
+      resolve(this.codexRoot, 'skills'),
+      resolve(this.claudeRoot, 'skills'),
+      ...extraRoots.map(root => resolve(root)),
+    ];
   }
 }

@@ -11,7 +11,19 @@ import { hashConfigRaw, readConfigDetail } from '../src/parsers/config-reader.js
 import { PathGuard } from '../src/fs/path-guard.js';
 
 class TestPathGuard extends PathGuard {
+  constructor(private readonly writableAuthPath?: string) {
+    super();
+  }
+
   override assertWritableConfig(filePath: string): string {
+    return filePath;
+  }
+
+  override assertCodexAuth(filePath = this.writableAuthPath || this.codexAuthPath): string {
+    return filePath;
+  }
+
+  override assertWritableCodexAuth(filePath = this.writableAuthPath || this.codexAuthPath): string {
     return filePath;
   }
 }
@@ -80,9 +92,49 @@ describe('config file management', () => {
       raw: '{}\n',
     })).rejects.toThrow(BadRequestException);
   });
+
+  it('replaces OPENAI_API_KEY in Codex auth.json with backup', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ai-manage-auth-'));
+    const authPath = join(dir, 'auth.json');
+    const original = '{ "OPENAI_API_KEY": "old", "account_id": "acct" }\n';
+    await writeFile(authPath, original);
+    const service = serviceWithSummaries([], new TestPathGuard(authPath));
+
+    const response = await service.replaceCodexOpenAiApiKey({ openaiApiKey: 'new-key' });
+
+    expect(response.backupPath).toBeTruthy();
+    expect(existsSync(response.backupPath!)).toBe(true);
+    expect(await readFile(response.backupPath!, 'utf8')).toBe(original);
+    expect(JSON.parse(await readFile(authPath, 'utf8'))).toEqual({
+      OPENAI_API_KEY: 'new-key',
+      account_id: 'acct',
+    });
+  });
+
+  it('reads OPENAI_API_KEY from Codex auth.json', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ai-manage-auth-'));
+    const authPath = join(dir, 'auth.json');
+    await writeFile(authPath, '{ "OPENAI_API_KEY": "existing-key", "account_id": "acct" }\n');
+    const service = serviceWithSummaries([], new TestPathGuard(authPath));
+
+    await expect(service.codexOpenAiApiKey()).resolves.toEqual({
+      openaiApiKey: 'existing-key',
+      exists: true,
+    });
+  });
+
+  it('returns an empty OPENAI_API_KEY response when Codex auth.json is missing', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ai-manage-auth-'));
+    const service = serviceWithSummaries([], new TestPathGuard(join(dir, 'auth.json')));
+
+    await expect(service.codexOpenAiApiKey()).resolves.toEqual({
+      openaiApiKey: '',
+      exists: false,
+    });
+  });
 });
 
-function serviceWithSummaries(files: ConfigFileSummary[]) {
+function serviceWithSummaries(files: ConfigFileSummary[], pathGuard = new TestPathGuard()) {
   const adapter: AiToolAdapter = {
     tool: 'codex',
     rootPath: tmpdir(),
@@ -102,7 +154,7 @@ function serviceWithSummaries(files: ConfigFileSummary[]) {
     all: () => [adapter],
     get: () => adapter,
   };
-  return new ConfigsService(adapters as never, new TestPathGuard());
+  return new ConfigsService(adapters as never, pathGuard);
 }
 
 function summary(overrides: Partial<ConfigFileSummary>): ConfigFileSummary {

@@ -7,5 +7,6 @@ export * from './contracts/trash.js';
 export * from './contracts/projects.js';
 export * from './contracts/logs.js';
 export * from './contracts/files.js';
+export * from './contracts/terminals.js';
 export * from './formatters/project.js';
 export * from './formatters/time.js';

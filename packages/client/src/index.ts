@@ -1,6 +1,7 @@
 import type {
   AiTool,
   ClearTrashSessionsResponse,
+  CodexOpenAiApiKeyResponse,
   ConfigFileDetail,
   ConfigFileSummary,
   DeleteSessionResponse,
@@ -8,6 +9,8 @@ import type {
   LogEntry,
   PaginatedResult,
   ProjectSummary,
+  ReplaceCodexOpenAiApiKeyRequest,
+  ReplaceCodexOpenAiApiKeyResponse,
   RestoreTrashSessionResponse,
   SaveConfigFileRequest,
   SaveConfigFileResponse,
@@ -18,6 +21,9 @@ import type {
   SessionsQuery,
   SkillDetail,
   SkillSummary,
+  CloseTerminalSessionResponse,
+  CreateTerminalSessionRequest,
+  TerminalSessionSummary,
   ToolDirectoryListing,
   ToolFilePreview,
   ToolStatus,
@@ -51,7 +57,12 @@ export function createAiManageClient(options: AiManageClientOptions = {}) {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
-    skills: () => request<SkillSummary[]>(fetchImpl, baseUrl, '/api/skills'),
+    codexOpenAiApiKey: () => request<CodexOpenAiApiKeyResponse>(fetchImpl, baseUrl, '/api/config-files/codex-auth/openai-api-key'),
+    replaceCodexOpenAiApiKey: (body: ReplaceCodexOpenAiApiKeyRequest) => request<ReplaceCodexOpenAiApiKeyResponse>(fetchImpl, baseUrl, '/api/config-files/codex-auth/openai-api-key', {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+    skills: (tool?: AiTool) => request<SkillSummary[]>(fetchImpl, baseUrl, `/api/skills${tool ? `?tool=${tool}` : ''}`),
     skill: (id: string) => request<SkillDetail>(fetchImpl, baseUrl, `/api/skills/${id}`),
     saveSkill: (id: string, body: SaveSkillRequest) => request<SaveSkillResponse>(fetchImpl, baseUrl, `/api/skills/${id}`, {
       method: 'PATCH',
@@ -76,6 +87,14 @@ export function createAiManageClient(options: AiManageClientOptions = {}) {
     projects: (tool?: AiTool) => request<ProjectSummary[]>(fetchImpl, baseUrl, `/api/projects${tool ? `?tool=${tool}` : ''}`),
     session: (tool: AiTool, id: string) => request<SessionDetail>(fetchImpl, baseUrl, `/api/sessions/${tool}/${encodeURIComponent(id)}`),
     deleteSession: (tool: AiTool, id: string) => request<DeleteSessionResponse>(fetchImpl, baseUrl, `/api/sessions/${tool}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+    terminalSessions: () => request<TerminalSessionSummary[]>(fetchImpl, baseUrl, '/api/terminals'),
+    createTerminalSession: (body: CreateTerminalSessionRequest) => request<TerminalSessionSummary>(fetchImpl, baseUrl, '/api/terminals', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+    closeTerminalSession: (id: string) => request<CloseTerminalSessionResponse>(fetchImpl, baseUrl, `/api/terminals/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
     trashSessions: (tool?: AiTool) => request<TrashSessionSummary[]>(fetchImpl, baseUrl, `/api/trash/sessions${tool ? `?tool=${tool}` : ''}`),

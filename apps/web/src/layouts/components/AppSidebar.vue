@@ -11,13 +11,16 @@ interface NavItem {
 
 defineProps<{
   activePath: string;
+  collapsed?: boolean;
 }>();
 
 const selectedTool = defineModel<AiTool>("selectedTool", { required: true });
 
 const navItems: NavItem[] = [
   { index: "/overview", label: "总览" },
+  { index: "/workspace", label: "对话" },
   { index: "/configs", label: "配置管理" },
+  { index: "/mcp-servers", label: "MCP 服务器" },
   { index: "/skills", label: "技能管理" },
   { index: "/files", label: "文件浏览" },
   { index: "/sessions", label: "历史会话" },
@@ -27,32 +30,40 @@ const navItems: NavItem[] = [
 </script>
 
 <template>
-  <el-aside width="232px" class="app-sidebar">
-    <div class="app-sidebar__brand">
-      <img class="app-sidebar__brand-mark" :src="logoUrl" alt="AI Manage" />
-      <div class="app-sidebar__brand-copy">
-        <div class="app-sidebar__tool-select-wrapper">
-          <el-select
-            v-model="selectedTool"
-            class="app-sidebar__tool-select"
-            placeholder="选择工具"
-          >
-            <el-option value="codex" label="Codex AI" />
-            <el-option value="claude" label="Claude AI" />
-          </el-select>
+  <el-aside
+    :width="collapsed ? '0px' : '232px'"
+    class="app-sidebar"
+    :class="{ 'app-sidebar--collapsed': collapsed }"
+  >
+    <div class="app-sidebar__inner">
+      <div class="app-sidebar__brand">
+        <img class="app-sidebar__brand-mark" :src="logoUrl" alt="AI Manage" />
+        <div class="app-sidebar__brand-copy">
+          <div class="app-sidebar__tool-select-wrapper">
+            <el-select
+              v-model="selectedTool"
+              class="app-sidebar__tool-select"
+              placeholder="选择工具"
+            >
+              <el-option value="codex" label="Codex AI" />
+              <el-option value="claude" label="Claude AI" />
+            </el-select>
+          </div>
         </div>
       </div>
-    </div>
 
-    <el-menu :default-active="activePath" router class="app-sidebar__nav">
-      <el-menu-item
-        v-for="item in navItems"
-        :key="item.index"
-        :index="item.index"
-      >
-        {{ item.label }}
-      </el-menu-item>
-    </el-menu>
+      <slot name="content">
+        <el-menu :default-active="activePath" router class="app-sidebar__nav">
+          <el-menu-item
+            v-for="item in navItems"
+            :key="item.index"
+            :index="item.index"
+          >
+            {{ item.label }}
+          </el-menu-item>
+        </el-menu>
+      </slot>
+    </div>
   </el-aside>
 </template>
 
@@ -68,6 +79,10 @@ const navItems: NavItem[] = [
     18px 0 42px rgb(20 32 51 / 7%);
   backdrop-filter: blur(22px) saturate(1.35);
   -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  transition:
+    width 0.24s ease,
+    box-shadow 0.24s ease,
+    opacity 0.2s ease;
 }
 
 .app-sidebar::before {
@@ -78,6 +93,17 @@ const navItems: NavItem[] = [
     linear-gradient(180deg, rgb(128 237 153 / 10%), transparent 28%);
   pointer-events: none;
   content: "";
+}
+
+.app-sidebar--collapsed {
+  box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-sidebar__inner {
+  width: 232px;
+  min-width: 232px;
 }
 
 .app-sidebar__brand {

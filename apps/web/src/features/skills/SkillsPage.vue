@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { Close } from "@element-plus/icons-vue";
 import { nextTick, shallowReactive, shallowRef, useTemplateRef } from "vue";
+import SkillCard from "./components/SkillCard.vue";
 import { useSkills } from "./use-skills";
 
 const {
   skills,
+  filteredSkills,
+  projectSkillGroups,
   selectedSkill,
   draftRaw,
+  skillScopeFilter,
+  skillScopeOptions,
   loadingList,
   loadingDetail,
   saving,
@@ -17,6 +22,7 @@ const {
   resetDraft,
   saveSkill,
   sourceLabel,
+  skillScopeLabel,
   formatSize,
 } = useSkills();
 
@@ -26,8 +32,9 @@ interface DropdownExpose {
 }
 
 const skillDrawerVisible = shallowRef(false);
-const skillContextDropdownRef =
-  useTemplateRef<DropdownExpose>("skillContextDropdown");
+const skillContextDropdownRef = useTemplateRef<DropdownExpose>(
+  "skillContextDropdown",
+);
 const skillContextMenuPosition = shallowReactive({ x: 0, y: 0 });
 const skillContextVirtualRef = {
   getBoundingClientRect: () =>
@@ -63,37 +70,52 @@ function handleSkillContextCommand(command: string | number | object) {
 
 <template>
   <section class="skills-page">
-    <div class="skill-card-context" @contextmenu.stop.prevent="openSkillContextMenu">
+    <header class="skill-toolbar">
+      <el-segmented v-model="skillScopeFilter" :options="skillScopeOptions" />
+      <span class="skill-toolbar__count">
+        {{ filteredSkills.length }} / {{ skills.length }}
+      </span>
+    </header>
+
+    <div
+      class="skill-card-context"
+      @contextmenu.stop.prevent="openSkillContextMenu"
+    >
       <el-scrollbar class="skill-card-scroll">
-        <div v-loading="loadingList" class="skill-card-grid">
-          <button
-            v-for="skill in skills"
-            :key="skill.id"
-            type="button"
-            class="skill-card"
-            @click="openSkillDrawer(skill.id)"
-          >
-            <span class="skill-card__main">
-              <strong>{{ skill.name }}</strong>
-              <small>{{ skill.description || "暂无简介" }}</small>
-            </span>
-            <span class="skill-card__footer">
-              <span class="skill-card__tags">
-                <el-tag
-                  size="small"
-                  :type="skill.source === 'codex' ? 'primary' : 'success'"
-                >
-                  {{ sourceLabel(skill.source) }}
-                </el-tag>
-                <el-tag v-if="skill.system" size="small" type="info">
-                  系统
-                </el-tag>
-              </span>
-            </span>
-          </button>
+        <div v-loading="loadingList" class="skill-list">
+          <div v-if="skillScopeFilter === 'project'" class="skill-project-list">
+            <section
+              v-for="group in projectSkillGroups"
+              :key="group.key"
+              class="skill-project-section"
+            >
+              <header class="skill-project-section__header">
+                <strong :title="group.projectPath || group.projectName">
+                  {{ group.projectName }}
+                </strong>
+                <span>{{ group.skills.length }} 个技能</span>
+              </header>
+              <div class="skill-card-grid">
+                <SkillCard
+                  v-for="skill in group.skills"
+                  :key="skill.id"
+                  :skill="skill"
+                  @select="openSkillDrawer"
+                />
+              </div>
+            </section>
+          </div>
+          <div v-else class="skill-card-grid skill-card-grid--flat">
+            <SkillCard
+              v-for="skill in filteredSkills"
+              :key="skill.id"
+              :skill="skill"
+              @select="openSkillDrawer"
+            />
+          </div>
         </div>
         <el-empty
-          v-if="!skills.length && !loadingList"
+          v-if="!filteredSkills.length && !loadingList"
           description="暂无技能"
         />
       </el-scrollbar>
@@ -150,8 +172,19 @@ function handleSkillContextCommand(command: string | number | object) {
             <strong>{{ sourceLabel(selectedSkill.source) }}</strong>
           </section>
           <section class="skill-info__item">
+            <span>类型</span>
+            <strong>{{ skillScopeLabel(selectedSkill) }}</strong>
+          </section>
+          <section class="skill-info__item">
             <span>大小</span>
             <strong>{{ formatSize(selectedSkill.size) }}</strong>
+          </section>
+          <section
+            v-if="selectedSkill.projectPath"
+            class="skill-info__item skill-info__item--wide"
+          >
+            <span>项目</span>
+            <p class="mono">{{ selectedSkill.projectPath }}</p>
           </section>
         </div>
 
@@ -199,6 +232,9 @@ function handleSkillContextCommand(command: string | number | object) {
 
 <style scoped lang="scss">
 .skills-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   height: calc(100vh - 112px);
   min-height: 0;
 }
@@ -211,8 +247,49 @@ function handleSkillContextCommand(command: string | number | object) {
 }
 
 .skill-card-context {
+  flex: 1;
   height: 100%;
   min-height: 0;
+}
+
+.skill-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+}
+
+.skill-toolbar :deep(.el-segmented) {
+  padding: 4px;
+  border: 1px solid var(--ds-color-border-soft);
+  border-radius: 999px;
+  background: var(--ds-color-surface);
+}
+
+.skill-toolbar :deep(.el-segmented__group) {
+  gap: 2px;
+}
+
+.skill-toolbar :deep(.el-segmented__item) {
+  min-width: 68px;
+  height: 34px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.skill-toolbar :deep(.el-segmented__item-label) {
+  padding: 0 16px;
+}
+
+.skill-toolbar :deep(.el-segmented__item-selected) {
+  border-radius: 999px;
+}
+
+.skill-toolbar__count {
+  color: var(--ds-color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .skill-context-trigger {
@@ -228,72 +305,54 @@ function handleSkillContextCommand(command: string | number | object) {
   min-height: 0;
 }
 
+.skill-list {
+  min-height: 100%;
+  padding-right: 12px;
+}
+
 .skill-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 12px;
+}
+
+.skill-card-grid--flat {
   min-height: 100%;
-  padding-right: 6px;
 }
 
-.skill-card {
+.skill-project-list {
+  display: grid;
+  gap: 22px;
+}
+
+.skill-project-section {
+  display: grid;
+  gap: 10px;
+}
+
+.skill-project-section__header {
   display: flex;
-  min-height: 154px;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 14px;
-  border: 1px solid var(--ds-color-border-soft);
-  border-radius: var(--ds-radius-control);
-  background: var(--ds-color-surface);
-  color: var(--ds-color-text);
-  cursor: pointer;
-  text-align: left;
-
-  &:hover {
-    border-color: var(--ds-state-active-border);
-    background: var(--ds-state-active-bg);
-  }
-}
-
-.skill-card__main {
-  display: flex;
+  gap: 12px;
   min-width: 0;
-  width: 100%;
-  flex-direction: column;
-  gap: 8px;
 
-  strong,
-  small {
+  strong {
+    min-width: 0;
     overflow: hidden;
+    color: var(--ds-color-text);
+    font-size: 15px;
+    font-weight: 800;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  small {
+  span {
+    flex: 0 0 auto;
     color: var(--ds-color-text-muted);
-    display: -webkit-box;
-    line-height: 1.5;
-    white-space: normal;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    font-size: 13px;
+    font-weight: 600;
   }
-}
-
-.skill-card__footer {
-  display: flex;
-  justify-content: flex-end;
-  width: 100%;
-  min-width: 0;
-}
-
-.skill-card__tags {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 4px;
 }
 
 .detail-actions {

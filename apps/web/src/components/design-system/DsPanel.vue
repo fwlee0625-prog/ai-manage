@@ -21,7 +21,7 @@ defineProps<{
     >
       <slot name="header">
         <div class="ds-panel__heading">
-          <h2 v-if="title" class="ds-panel__title">{{ title }}</h2>
+          <h2 v-if="title" class="ds-panel__title" :title="title">{{ title }}</h2>
           <p v-if="description" class="ds-panel__description">{{ description }}</p>
         </div>
       </slot>
@@ -63,21 +63,30 @@ defineProps<{
 
 .ds-panel__heading {
   display: grid;
+  flex: 1 1 auto;
   gap: 3px;
   min-width: 0;
+  max-width: min(520px, 100%);
+  overflow: hidden;
 }
 
 .ds-panel__title {
   margin: 0;
+  overflow: hidden;
   color: var(--ds-color-text);
   font-size: 15px;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ds-panel__description {
   margin: 0;
+  overflow: hidden;
   color: var(--ds-color-text-muted);
   font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ds-panel__actions {

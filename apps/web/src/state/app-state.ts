@@ -6,6 +6,7 @@ import { runWithApiFeedback } from '../shared/composables/use-api-feedback';
 export const selectedTool = shallowRef<AiTool>('codex');
 export const refreshing = shallowRef(false);
 export const refreshRevision = shallowRef(0);
+export const lastRefreshAt = shallowRef('');
 
 /**
  * Refreshes the indexed data for the currently selected AI tool.
@@ -17,7 +18,10 @@ export async function refreshIndex() {
       () => api.refresh(selectedTool.value),
       { success: '索引已刷新' },
     );
-    if (result) refreshRevision.value += 1;
+    if (result) {
+      refreshRevision.value += 1;
+      lastRefreshAt.value = new Date().toISOString();
+    }
   } finally {
     refreshing.value = false;
   }

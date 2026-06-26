@@ -35,3 +35,16 @@ export interface SaveConfigFileResponse {
   detail: ConfigFileDetail;
   backupPath: string;
 }
+
+export interface ReplaceCodexOpenAiApiKeyRequest {
+  openaiApiKey: string;
+}
+
+export interface ReplaceCodexOpenAiApiKeyResponse {
+  backupPath?: string;
+}
+
+export interface CodexOpenAiApiKeyResponse {
+  openaiApiKey: string;
+  exists: boolean;
+}

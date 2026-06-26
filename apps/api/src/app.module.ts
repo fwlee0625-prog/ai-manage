@@ -20,6 +20,9 @@ import { SessionsController } from './routes/sessions.controller.js';
 import { SessionsService } from './routes/sessions.service.js';
 import { SkillsController } from './routes/skills.controller.js';
 import { SkillsService } from './routes/skills.service.js';
+import { TerminalsController } from './routes/terminals.controller.js';
+import { TerminalsService } from './routes/terminals.service.js';
+import { TerminalsWebSocketServer } from './routes/terminals.websocket.js';
 import { ToolsController } from './routes/tools.controller.js';
 import { ToolsService } from './routes/tools.service.js';
 import { TrashController } from './routes/trash.controller.js';
@@ -31,6 +34,7 @@ import { TrashController } from './routes/trash.controller.js';
     SkillsController,
     SessionsController,
     ProjectsController,
+    TerminalsController,
     FilesController,
     TrashController,
     IndexingController,
@@ -48,6 +52,8 @@ import { TrashController } from './routes/trash.controller.js';
     IndexRefreshService,
     ProjectsService,
     SessionsService,
+    TerminalsService,
+    TerminalsWebSocketServer,
     LogsService,
     ConfigsService,
     SkillsService,

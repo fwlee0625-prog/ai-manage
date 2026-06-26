@@ -4,13 +4,14 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { relativeTimeFromNow } from '@ai-manage/shared';
 import type { PaginatedResult, ProjectSummary, SessionDetail, SessionSummary } from '@ai-manage/shared';
 import { api } from '../../api';
-import { defaultVisibleChatRoles, toChatMessageViewModel } from '../../components/chat/message';
+import { defaultVisibleChatRoles, filterMirrorEvents, toChatMessageViewModel } from '../../components/chat/message';
 import type VirtualMessageList from '../../components/chat/VirtualMessageList.vue';
 import type { ChatDisplayMode, ChatMessageRole } from '../../components/chat/types';
 import { refreshRevision, selectedTool } from '../../state/app-state';
 
 const collapsedSessionLimit = 5;
 const sessionLimitStep = 10;
+const deletionConfirmTitleMaxLength = 32;
 
 export function useSessions() {
   const projects = ref<ProjectSummary[]>([]);
@@ -19,12 +20,16 @@ export function useSessions() {
   const sessions = reactive<PaginatedResult<SessionSummary>>({ items: [], total: 0, page: 1, pageSize: 5000 });
   const selectedSession = ref<SessionDetail>();
   const messageListRef = ref<InstanceType<typeof VirtualMessageList>>();
-  const deletingSession = ref(false);
+  const deletingSessionId = ref('');
+  const deletingSession = computed(() => !!deletingSessionId.value);
+  const deletingSessionKey = computed(() => deletingSessionId.value);
   const chatDisplayMode = ref<ChatDisplayMode>('chat');
   const visibleChatRoles = ref<ChatMessageRole[]>([...defaultVisibleChatRoles]);
+  const showMirrorEvents = ref(false);
   const sessionQuery = reactive({ page: 1, pageSize: 5000 });
 
-  const chatMessages = computed(() => selectedSession.value?.messages.map(toChatMessageViewModel) || []);
+  const allChatMessages = computed(() => selectedSession.value?.messages.map(toChatMessageViewModel) || []);
+  const chatMessages = computed(() => showMirrorEvents.value ? allChatMessages.value : filterMirrorEvents(allChatMessages.value));
 
   function relativeTime(value?: string) {
     return relativeTimeFromNow(value);
@@ -122,12 +127,16 @@ export function useSessions() {
     messageListRef.value?.scrollToBottom();
   }
 
-  async function deleteSelectedSession() {
-    if (!selectedSession.value) return;
-    const session = selectedSession.value;
+  function isDeletingSession(row: SessionSummary) {
+    return deletingSessionId.value === `${row.tool}:${row.id}`;
+  }
+
+  async function deleteSession(row: SessionSummary) {
+    const session = row;
+    const displayTitle = truncateText(session.title, deletionConfirmTitleMaxLength);
     try {
       await ElMessageBox.confirm(
-        `确定删除「${session.title}」吗？原始会话会从 ${session.tool === 'codex' ? 'Codex' : 'Claude'} 数据目录移除。`,
+        `确定删除「${displayTitle}」吗？原始会话会从 ${session.tool === 'codex' ? 'Codex' : 'Claude'} 数据目录移除。`,
         '删除历史会话',
         {
           type: 'warning',
@@ -140,22 +149,29 @@ export function useSessions() {
       return;
     }
 
-    deletingSession.value = true;
+    deletingSessionId.value = `${session.tool}:${session.id}`;
     try {
       const result = await api.deleteSession(session.tool, session.id);
-      selectedSession.value = undefined;
+      if (selectedSession.value?.tool === session.tool && selectedSession.value.id === session.id) {
+        selectedSession.value = undefined;
+      }
       await loadProjects();
       await loadSessions();
       ElMessage.success(`已删除，备份：${result.backupDir}`);
     } catch (error) {
       ElMessage.error(error instanceof Error ? error.message : String(error));
     } finally {
-      deletingSession.value = false;
+      deletingSessionId.value = '';
     }
   }
 
+  async function deleteSelectedSession() {
+    if (!selectedSession.value) return;
+    await deleteSession(selectedSession.value);
+  }
+
   watch([selectedTool, refreshRevision], reloadSessionsPage);
-  watch([chatDisplayMode, () => visibleChatRoles.value.join(',')], async () => {
+  watch([chatDisplayMode, showMirrorEvents, () => visibleChatRoles.value.join(',')], async () => {
     await nextTick();
     messageListRef.value?.scrollToBottom();
   });
@@ -170,8 +186,10 @@ export function useSessions() {
     selectedSession,
     messageListRef,
     deletingSession,
+    deletingSessionKey,
     chatDisplayMode,
     visibleChatRoles,
+    showMirrorEvents,
     chatMessages,
     relativeTime,
     sessionsForProject,
@@ -180,7 +198,18 @@ export function useSessions() {
     toggleProject,
     toggleProjectSessionLimit,
     selectSession,
+    deleteSession,
     deleteSelectedSession,
+    isDeletingSession,
     Delete,
   };
+}
+
+/**
+ * Truncates long dialog text without splitting Unicode code points.
+ */
+function truncateText(value: string, maxLength: number) {
+  const chars = Array.from(value.trim());
+  if (chars.length <= maxLength) return value;
+  return `${chars.slice(0, maxLength).join('')}...`;
 }

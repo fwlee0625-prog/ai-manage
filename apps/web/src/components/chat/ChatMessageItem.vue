@@ -1,17 +1,52 @@
 <template>
-  <article class="chat-message" :class="[`role-${message.role}`, { 'raw-mode': mode === 'raw' }]">
-    <header class="message-meta">
+  <article
+    class="chat-message"
+    :class="[
+      `role-${message.role}`,
+      liveStateClass,
+      { 'raw-mode': mode === 'raw', 'is-live-status': isLiveStatus },
+    ]"
+  >
+    <div v-if="isLiveStatus" class="live-status-message">
+      <span v-if="!isProcessedStatus" class="live-status-message__icon"></span>
+      <span class="live-status-message__text">{{ message.content }}</span>
+      <span v-if="message.live?.detail" class="live-status-message__detail">{{ message.live.detail }}</span>
+    </div>
+
+    <header v-else class="message-meta">
       <el-tag size="small" :type="tagType">{{ chatRoleLabels[message.role] }}</el-tag>
       <span class="original-role">{{ message.originalRole }}</span>
       <span class="message-time">{{ formatChatTime(message.timestamp) }}</span>
     </header>
 
-    <div v-if="mode === 'chat'" class="message-bubble">
-      <div class="markdown-body" v-html="displayHtml"></div>
+    <div v-if="!isLiveStatus && mode === 'chat'" class="message-bubble">
+      <div v-if="displayHtml" class="markdown-body" v-html="displayHtml"></div>
+      <div v-if="message.images.length" class="message-images">
+        <img
+          v-for="image in message.images"
+          :key="image.src"
+          class="message-image"
+          :src="image.src"
+          :alt="image.alt"
+          loading="lazy"
+        />
+      </div>
     </div>
-    <pre v-else class="raw-block">{{ displayText }}</pre>
+    <template v-else-if="!isLiveStatus">
+      <pre class="raw-block">{{ displayText }}</pre>
+      <div v-if="message.images.length" class="message-images raw-images">
+        <img
+          v-for="image in message.images"
+          :key="image.src"
+          class="message-image"
+          :src="image.src"
+          :alt="image.alt"
+          loading="lazy"
+        />
+      </div>
+    </template>
 
-    <button v-if="isLong" type="button" class="content-toggle" @click="$emit('toggle')">
+    <button v-if="!isLiveStatus && isLong" type="button" class="content-toggle" @click="$emit('toggle')">
       {{ expanded ? '收起内容' : '展开完整内容' }}
     </button>
   </article>
@@ -36,6 +71,11 @@ defineEmits<{
 const chatPreviewLimit = 1800;
 const rawPreviewLimit = 3600;
 
+const isLiveStatus = computed(() => props.message.live?.type === 'status');
+const isProcessedStatus = computed(() => props.message.live?.state === 'processed');
+const liveStateClass = computed(() =>
+  props.message.live?.state ? `live-state-${props.message.live.state}` : '',
+);
 const sourceText = computed(() => props.mode === 'raw' ? props.message.rawText : props.message.content);
 const previewLimit = computed(() => props.mode === 'raw' ? rawPreviewLimit : chatPreviewLimit);
 const isLong = computed(() => sourceText.value.length > previewLimit.value);
@@ -76,6 +116,77 @@ const tagType = computed(() => {
 
 .role-user .message-meta {
   justify-content: flex-end;
+}
+
+.is-live-status {
+  align-items: flex-start;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.live-status-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: min(760px, 86%);
+  color: #9aa3af;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.live-state-processed {
+  padding-top: 14px;
+}
+
+.live-state-processed .live-status-message {
+  width: 100%;
+  max-width: 100%;
+  gap: 6px;
+}
+
+.live-state-processed .live-status-message::after {
+  flex: 1 1 auto;
+  height: 1px;
+  margin-left: 10px;
+  background: #d8dde5;
+  content: "";
+}
+
+.live-status-message__icon {
+  position: relative;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  border: 1px solid #a8b0bb;
+  border-radius: 5px;
+}
+
+.live-status-message__icon::before {
+  position: absolute;
+  top: 1px;
+  left: 5px;
+  color: #8f98a5;
+  content: ">";
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 13px;
+}
+
+.live-status-message__detail {
+  overflow: hidden;
+  color: #9aa3af;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-state-reading .live-status-message__text,
+.live-state-editing .live-status-message__text,
+.live-state-searching .live-status-message__text,
+.live-state-executing .live-status-message__text {
+  color: #9aa3af;
 }
 
 .original-role {
@@ -159,6 +270,37 @@ pre {
   font-size: 13px;
   line-height: 1.65;
   word-break: break-word;
+}
+
+.message-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 320px));
+  gap: 8px;
+  max-width: 100%;
+  margin-top: 0;
+}
+
+.markdown-body + .message-images {
+  margin-top: 12px;
+}
+
+.raw-images {
+  max-width: min(760px, 86%);
+}
+
+.role-user .raw-images {
+  align-self: flex-end;
+}
+
+.message-image {
+  display: block;
+  width: auto;
+  max-width: min(320px, 100%);
+  max-height: 360px;
+  border: 1px solid #d8dee9;
+  border-radius: 6px;
+  background: #ffffff;
+  object-fit: contain;
 }
 
 .markdown-body :deep(*) {

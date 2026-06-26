@@ -1,15 +1,15 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
-import type { SaveSkillRequest } from '@ai-manage/shared';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import type { AiTool, SaveSkillRequest } from '@ai-manage/shared';
 import { SkillsService } from './skills.service.js';
 
 @Controller('skills')
 export class SkillsController {
   constructor(private readonly service: SkillsService) {}
 
-  /** Lists discovered Codex and Agents skills. */
+  /** Lists discovered skills for one tool or all tools. */
   @Get()
-  skills() {
-    return this.service.skills();
+  skills(@Query('tool') tool?: AiTool) {
+    return this.service.skills(tool);
   }
 
   /** Reads a single skill file by stable id. */

@@ -19,6 +19,12 @@ const {
   rootDirty,
   rootFields,
   draftRecord,
+  activeModelProviderKey,
+  modelProviderCards,
+  modelProviderDrawerVisible,
+  modelProviderDrawerMode,
+  modelProviderDraftKey,
+  modelProviderDraftForm,
   selectMenu,
   resetDraft,
   reloadSelected,
@@ -34,10 +40,16 @@ const {
   isGroupItemDirty,
   sectionId,
   saveGroupItemSection,
+  toggleGroupItemSection,
   updateGroupItem,
   isGroupDirty,
   saveGroupSection,
   updateGroup,
+  openModelProviderCreate,
+  openModelProviderEdit,
+  closeModelProviderDrawer,
+  saveModelProviderDraft,
+  activateModelProvider,
 } = useConfigs();
 </script>
 
@@ -67,6 +79,9 @@ const {
         <div v-if="selectedConfig && selectedMenuItem" class="config-editor">
           <ConfigEditorSections
             v-model:draft-raw="draftRaw"
+            v-model:model-provider-drawer-visible="modelProviderDrawerVisible"
+            v-model:model-provider-draft-key="modelProviderDraftKey"
+            v-model:model-provider-draft-form="modelProviderDraftForm"
             :selected-config="selectedConfig"
             :selected-menu-item="selectedMenuItem"
             :saving-section="savingSection"
@@ -75,6 +90,9 @@ const {
             :root-dirty="rootDirty"
             :root-fields="rootFields"
             :draft-record="draftRecord"
+            :active-model-provider-key="activeModelProviderKey"
+            :model-provider-cards="modelProviderCards"
+            :model-provider-drawer-mode="modelProviderDrawerMode"
             :field-path="fieldPath"
             :config-field-meta="configFieldMeta"
             :should-split-group="shouldSplitGroup"
@@ -88,9 +106,15 @@ const {
             @save-root="saveRootSection"
             @update-root-fields="updateRootFields"
             @save-group-item="saveGroupItemSection"
+            @toggle-group-item="toggleGroupItemSection"
             @update-group-item="updateGroupItem"
             @save-group="saveGroupSection"
             @update-group="updateGroup"
+            @create-model-provider="openModelProviderCreate"
+            @edit-model-provider="openModelProviderEdit"
+            @activate-model-provider="activateModelProvider"
+            @save-model-provider="saveModelProviderDraft"
+            @close-model-provider="closeModelProviderDrawer"
           />
         </div>
 

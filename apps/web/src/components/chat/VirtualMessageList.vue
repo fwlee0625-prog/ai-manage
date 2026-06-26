@@ -1,6 +1,23 @@
 <template>
-  <div ref="scroller" class="virtual-message-list" @scroll="handleScroll">
-    <div v-if="filteredMessages.length" class="virtual-spacer" :style="{ height: `${totalHeight}px` }">
+  <div
+    ref="scroller"
+    class="virtual-message-list"
+    @scroll="handleScroll"
+    @wheel.passive="handleWheel"
+    @touchstart.passive="handleTouchStart"
+    @touchmove.passive="handleTouchMove"
+  >
+    <div v-if="filteredMessages.length && naturalFlow" class="message-flow-list">
+      <ChatMessageItem
+        v-for="message in filteredMessages"
+        :key="message.id"
+        :message="message"
+        :mode="mode"
+        :expanded="expandedMessages.has(message.id)"
+        @toggle="toggleExpanded(message.id)"
+      />
+    </div>
+    <div v-else-if="filteredMessages.length" class="virtual-spacer" :style="{ height: `${totalHeight}px` }">
       <div
         v-for="entry in visibleEntries"
         :key="`${entry.message.id}-${entry.index}`"
@@ -30,8 +47,16 @@ const props = withDefaults(defineProps<{
   mode: ChatDisplayMode;
   visibleRoles: ChatMessageRole[];
   estimatedItemHeight?: number;
+  preserveScrollOnUpdate?: boolean;
+  scrollBottomKey?: string | number;
+  followBottomTrigger?: string | number;
+  naturalFlow?: boolean;
 }>(), {
   estimatedItemHeight: 150,
+  preserveScrollOnUpdate: false,
+  scrollBottomKey: '',
+  followBottomTrigger: 0,
+  naturalFlow: false,
 });
 
 const scroller = ref<HTMLElement>();
@@ -43,6 +68,17 @@ const overscanPx = 600;
 let resizeObserver: ResizeObserver | undefined;
 let measureFrame = 0;
 let scrollFrame = 0;
+let scrollRetryFrame = 0;
+let lastScrollTop = 0;
+let userScrollIntent = false;
+let ignoreScrollEvent = false;
+let touchStartY = 0;
+let suppressAutoBottomUntil = 0;
+const followDisableDistancePx = 180;
+const nearBottomThresholdPx = 96;
+const userScrollSuppressionMs = 2000;
+const shouldFollowBottom = ref(false);
+const naturalFlow = computed(() => props.naturalFlow);
 
 const filteredMessages = computed(() => {
   const visible = new Set(props.visibleRoles);
@@ -95,7 +131,40 @@ function findStartIndex(targetTop: number) {
 }
 
 function handleScroll() {
-  scrollTop.value = scroller.value?.scrollTop || 0;
+  if (!scroller.value) return;
+  const nextScrollTop = scroller.value.scrollTop;
+  const isUserScrollingUp = userScrollIntent && nextScrollTop < lastScrollTop;
+  scrollTop.value = nextScrollTop;
+  if (
+    shouldFollowBottom.value
+    && !ignoreScrollEvent
+    && isUserScrollingUp
+    && !isNearBottom(followDisableDistancePx)
+  ) {
+    suppressAutoBottom();
+  }
+  lastScrollTop = nextScrollTop;
+  ignoreScrollEvent = false;
+  userScrollIntent = false;
+}
+
+function handleUserScrollIntent(isScrollingUp: boolean) {
+  userScrollIntent = true;
+  if (isScrollingUp) suppressAutoBottom();
+}
+
+function handleWheel(event: WheelEvent) {
+  handleUserScrollIntent(event.deltaY < 0);
+}
+
+function handleTouchStart(event: TouchEvent) {
+  touchStartY = event.touches[0]?.clientY || 0;
+}
+
+function handleTouchMove(event: TouchEvent) {
+  const currentY = event.touches[0]?.clientY || touchStartY;
+  handleUserScrollIntent(currentY > touchStartY);
+  touchStartY = currentY;
 }
 
 function updateViewportHeight() {
@@ -111,7 +180,7 @@ function scheduleMeasure() {
 }
 
 function measureVisibleRows() {
-  if (!scroller.value) return;
+  if (!scroller.value || props.naturalFlow) return;
   const nextHeights = new Map(itemHeights.value);
   let changed = false;
   scroller.value.querySelectorAll<HTMLElement>('.virtual-row').forEach((row) => {
@@ -144,28 +213,111 @@ function scrollToTop() {
 
 function scrollToBottom() {
   if (!scroller.value) return;
-  scroller.value.scrollTop = totalHeight.value;
+  ignoreScrollEvent = true;
+  scroller.value.scrollTop = Math.max(0, scroller.value.scrollHeight - scroller.value.clientHeight);
   scrollTop.value = scroller.value.scrollTop;
+  lastScrollTop = scrollTop.value;
 }
 
-function scheduleScrollToBottom() {
+function cancelScheduledScroll() {
+  if (scrollFrame) cancelAnimationFrame(scrollFrame);
+  if (scrollRetryFrame) cancelAnimationFrame(scrollRetryFrame);
+  scrollFrame = 0;
+  scrollRetryFrame = 0;
+}
+
+function suppressAutoBottom() {
+  shouldFollowBottom.value = false;
+  suppressAutoBottomUntil = Date.now() + userScrollSuppressionMs;
+  cancelScheduledScroll();
+}
+
+function isAutoBottomSuppressed() {
+  return Date.now() < suppressAutoBottomUntil;
+}
+
+function isNearBottom(thresholdPx = nearBottomThresholdPx) {
+  if (!scroller.value) return true;
+  const distance = scroller.value.scrollHeight - scroller.value.clientHeight - scroller.value.scrollTop;
+  return distance <= thresholdPx;
+}
+
+function scheduleScrollToBottom(retries = 4) {
   if (scrollFrame) cancelAnimationFrame(scrollFrame);
   scrollFrame = requestAnimationFrame(() => {
     scrollFrame = 0;
+    measureVisibleRows();
     scrollToBottom();
+    scheduleMeasure();
+    scheduleScrollToBottomRetry(retries);
+  });
+}
+
+function scheduleScrollToBottomRetry(retries: number) {
+  if (scrollRetryFrame) cancelAnimationFrame(scrollRetryFrame);
+  if (retries <= 0) return;
+  scrollRetryFrame = requestAnimationFrame(() => {
+    scrollRetryFrame = 0;
+    measureVisibleRows();
+    scrollToBottom();
+    scheduleScrollToBottomRetry(retries - 1);
+  });
+}
+
+function resetListState(forceBottom = false) {
+  itemHeights.value = new Map();
+  expandedMessages.value = new Set();
+  nextTick(() => {
+    if (props.preserveScrollOnUpdate && isAutoBottomSuppressed() && !forceBottom) {
+      scheduleMeasure();
+      return;
+    }
+    if (forceBottom || !props.preserveScrollOnUpdate || shouldFollowBottom.value || isNearBottom()) {
+      scheduleScrollToBottom();
+      return;
+    }
     scheduleMeasure();
   });
 }
 
-function resetListState() {
-  itemHeights.value = new Map();
-  expandedMessages.value = new Set();
-  nextTick(scheduleScrollToBottom);
+function handleMessagesChanged() {
+  nextTick(() => {
+    if (props.preserveScrollOnUpdate && isAutoBottomSuppressed() && !shouldFollowBottom.value) {
+      scheduleMeasure();
+      return;
+    }
+    if (!props.preserveScrollOnUpdate || shouldFollowBottom.value || isNearBottom()) {
+      scheduleScrollToBottom();
+      return;
+    }
+    scheduleMeasure();
+  });
 }
 
+function enableFollowBottom() {
+  suppressAutoBottomUntil = 0;
+  shouldFollowBottom.value = true;
+  scheduleScrollToBottom();
+}
+
+watch(() => props.messages, handleMessagesChanged);
+
 watch(
-  () => [props.messages, props.mode, props.visibleRoles.join(',')],
-  resetListState,
+  () => [props.mode, props.visibleRoles.join(',')],
+  () => resetListState(),
+);
+
+watch(
+  () => props.scrollBottomKey,
+  () => {
+    shouldFollowBottom.value = false;
+    resetListState(true);
+  },
+);
+
+watch(
+  () => props.followBottomTrigger,
+  enableFollowBottom,
 );
 
 watch(visibleEntries, () => nextTick(scheduleMeasure));
@@ -177,16 +329,20 @@ onMounted(() => {
     scheduleMeasure();
   });
   if (scroller.value) resizeObserver.observe(scroller.value);
-  nextTick(scheduleMeasure);
+  nextTick(() => {
+    scheduleMeasure();
+    scheduleScrollToBottom();
+  });
 });
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
   if (measureFrame) cancelAnimationFrame(measureFrame);
   if (scrollFrame) cancelAnimationFrame(scrollFrame);
+  if (scrollRetryFrame) cancelAnimationFrame(scrollRetryFrame);
 });
 
-defineExpose({ scrollToBottom, scrollToTop });
+defineExpose({ scrollToBottom: () => scheduleScrollToBottom(), scrollToTop, enableFollowBottom });
 </script>
 
 <style scoped>
