@@ -41,6 +41,27 @@ describe('config file management', () => {
     expect(files.map(file => file.name)).toEqual(['config.toml']);
   });
 
+  it('loads hidden editable config details for focused feature editors', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ai-manage-config-'));
+    const filePath = join(dir, '.claude.json');
+    await writeFile(filePath, '{ "mcpServers": {} }\n');
+    const file = summary({
+      name: '.claude.json',
+      path: filePath,
+      tool: 'codex',
+      format: 'json',
+      formKind: 'json-config',
+      hiddenFromConfigPage: true,
+      editable: true,
+    });
+    const service = serviceWithSummaries([file]);
+
+    const details = await service.editableConfigDetails('codex');
+
+    expect(details).toHaveLength(1);
+    expect(details[0]?.formModel).toEqual({ mcpServers: {} });
+  });
+
   it('saves editable config files with hash checks and backup', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'ai-manage-config-'));
     const filePath = join(dir, 'settings.json');

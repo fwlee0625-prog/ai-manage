@@ -5,6 +5,7 @@ import type {
   ConfigFileDetail,
   ConfigFileSummary,
   DeleteSessionResponse,
+  FavoriteSkillResponse,
   IndexStatus,
   LogEntry,
   PaginatedResult,
@@ -30,6 +31,7 @@ import type {
   TrashSessionDetail,
   TrashSessionFilePreview,
   TrashSessionSummary,
+  UnfavoriteSkillResponse,
 } from '@ai-manage/shared';
 
 export interface AiManageClientOptions {
@@ -52,6 +54,7 @@ export function createAiManageClient(options: AiManageClientOptions = {}) {
       body: JSON.stringify({ tool }),
     }),
     configFiles: (tool?: AiTool) => request<ConfigFileSummary[]>(fetchImpl, baseUrl, `/api/config-files${tool ? `?tool=${tool}` : ''}`),
+    editableConfigDetails: (tool: AiTool) => request<ConfigFileDetail[]>(fetchImpl, baseUrl, `/api/config-files/editable-details?tool=${tool}`),
     configFile: (id: string) => request<ConfigFileDetail>(fetchImpl, baseUrl, `/api/config-files/${id}`),
     saveConfigFile: (id: string, body: SaveConfigFileRequest) => request<SaveConfigFileResponse>(fetchImpl, baseUrl, `/api/config-files/${id}`, {
       method: 'PATCH',
@@ -63,7 +66,14 @@ export function createAiManageClient(options: AiManageClientOptions = {}) {
       body: JSON.stringify(body),
     }),
     skills: (tool?: AiTool) => request<SkillSummary[]>(fetchImpl, baseUrl, `/api/skills${tool ? `?tool=${tool}` : ''}`),
+    localSkills: () => request<SkillSummary[]>(fetchImpl, baseUrl, '/api/skills/local'),
     skill: (id: string) => request<SkillDetail>(fetchImpl, baseUrl, `/api/skills/${id}`),
+    favoriteSkill: (id: string) => request<FavoriteSkillResponse>(fetchImpl, baseUrl, `/api/skills/${encodeURIComponent(id)}/favorite`, {
+      method: 'POST',
+    }),
+    unfavoriteSkill: (id: string) => request<UnfavoriteSkillResponse>(fetchImpl, baseUrl, `/api/skills/${encodeURIComponent(id)}/favorite`, {
+      method: 'DELETE',
+    }),
     saveSkill: (id: string, body: SaveSkillRequest) => request<SaveSkillResponse>(fetchImpl, baseUrl, `/api/skills/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(body),

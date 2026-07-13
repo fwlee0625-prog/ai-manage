@@ -15,6 +15,7 @@ describe('PathGuard', () => {
     const guard = new PathGuard();
 
     expect(guard.assertWritableConfig(resolve(HOME_DIR, '.codex', 'config.toml'))).toBe(resolve(HOME_DIR, '.codex', 'config.toml'));
+    expect(guard.assertWritableConfig(resolve(HOME_DIR, '.claude.json'))).toBe(resolve(HOME_DIR, '.claude.json'));
     expect(() => guard.assertWritableConfig(resolve(HOME_DIR, '.codex', 'history.jsonl'))).toThrow(ForbiddenException);
   });
 

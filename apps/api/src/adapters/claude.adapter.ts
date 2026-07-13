@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { PathGuard } from '../fs/path-guard.js';
 import { buildConfigSummary, readConfigDetail } from '../parsers/config-reader.js';
 import { countJsonl, readJsonl } from '../parsers/jsonl.js';
-import { normalizeText, stableId } from '../utils.js';
+import { HOME_DIR, normalizeText, stableId } from '../utils.js';
 import type { AiToolAdapter } from './ai-tool.adapter.js';
 import { messageFromRaw } from './ai-tool.adapter.js';
 import { SessionDeleteBackup } from './session-delete.js';
@@ -26,6 +26,7 @@ export class ClaudeAdapter implements AiToolAdapter {
 
   async listConfigFiles(): Promise<ConfigFileSummary[]> {
     const candidates = [
+      { name: '.claude.json', path: resolve(HOME_DIR, '.claude.json'), category: 'config', editable: true, formKind: 'json-config', hiddenFromConfigPage: true },
       { name: 'settings.json', category: 'config', editable: true, formKind: 'json-config', hiddenFromConfigPage: false },
       { name: 'settings.local.json', category: 'config', editable: true, formKind: 'json-config', hiddenFromConfigPage: false },
       { name: 'CLAUDE.md', category: 'instruction', editable: true, formKind: 'markdown-instruction', hiddenFromConfigPage: false },
@@ -33,7 +34,7 @@ export class ClaudeAdapter implements AiToolAdapter {
       { name: 'stats-cache.json', category: 'cache', editable: false, formKind: 'readonly', hiddenFromConfigPage: true },
     ] as const;
     const existing = candidates
-      .map(candidate => ({ ...candidate, path: resolve(this.rootPath, candidate.name) }))
+      .map(candidate => ({ ...candidate, path: 'path' in candidate ? candidate.path : resolve(this.rootPath, candidate.name) }))
       .filter(candidate => existsSync(candidate.path));
     return Promise.all(existing.map(file => buildConfigSummary(this.tool, file.path, file)));
   }

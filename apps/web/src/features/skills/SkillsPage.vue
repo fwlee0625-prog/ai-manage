@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Close } from "@element-plus/icons-vue";
+import { ArrowDown, Close } from "@element-plus/icons-vue";
 import { nextTick, shallowReactive, shallowRef, useTemplateRef } from "vue";
 import SkillCard from "./components/SkillCard.vue";
 import { useSkills } from "./use-skills";
 
 const {
-  skills,
   filteredSkills,
+  totalSkillCount,
   projectSkillGroups,
   selectedSkill,
   draftRaw,
@@ -21,7 +21,10 @@ const {
   selectSkill,
   resetDraft,
   saveSkill,
-  sourceLabel,
+  toggleFavoriteSkill,
+  isSkillFavorited,
+  isSkillFavoriteUpdating,
+  skillSourceLabel,
   skillScopeLabel,
   formatSize,
 } = useSkills();
@@ -32,6 +35,7 @@ interface DropdownExpose {
 }
 
 const skillDrawerVisible = shallowRef(false);
+const collapsedProjectKeys = shallowRef<ReadonlySet<string>>(new Set());
 const skillContextDropdownRef = useTemplateRef<DropdownExpose>(
   "skillContextDropdown",
 );
@@ -42,11 +46,41 @@ const skillContextVirtualRef = {
 };
 
 /**
+ * Returns whether the given project's skill grid is collapsed.
+ */
+function isProjectCollapsed(projectKey: string) {
+  return collapsedProjectKeys.value.has(projectKey);
+}
+
+/**
+ * Toggles the visibility of one project's skills without affecting other groups.
+ */
+function toggleProjectSkills(projectKey: string) {
+  const nextCollapsedKeys = new Set(collapsedProjectKeys.value);
+  if (nextCollapsedKeys.has(projectKey)) {
+    nextCollapsedKeys.delete(projectKey);
+  } else {
+    nextCollapsedKeys.add(projectKey);
+  }
+  collapsedProjectKeys.value = nextCollapsedKeys;
+}
+
+/**
  * Opens the side drawer and loads the selected skill detail.
  */
 async function openSkillDrawer(skillId: string) {
   skillDrawerVisible.value = true;
   await selectSkill(skillId);
+}
+
+/**
+ * Toggles one local favorite and closes a removed local detail if necessary.
+ */
+async function handleToggleFavorite(skillId: string) {
+  const action = await toggleFavoriteSkill(skillId);
+  if (action === "unfavorited" && !selectedSkill.value) {
+    skillDrawerVisible.value = false;
+  }
 }
 
 /**
@@ -73,7 +107,7 @@ function handleSkillContextCommand(command: string | number | object) {
     <header class="skill-toolbar">
       <el-segmented v-model="skillScopeFilter" :options="skillScopeOptions" />
       <span class="skill-toolbar__count">
-        {{ filteredSkills.length }} / {{ skills.length }}
+        {{ filteredSkills.length }} / {{ totalSkillCount }}
       </span>
     </header>
 
@@ -90,17 +124,38 @@ function handleSkillContextCommand(command: string | number | object) {
               class="skill-project-section"
             >
               <header class="skill-project-section__header">
-                <strong :title="group.projectPath || group.projectName">
-                  {{ group.projectName }}
-                </strong>
+                <button
+                  class="skill-project-section__toggle"
+                  type="button"
+                  :title="group.projectPath || group.projectName"
+                  :aria-expanded="!isProjectCollapsed(group.key)"
+                  @click="toggleProjectSkills(group.key)"
+                >
+                  <strong>{{ group.projectName }}</strong>
+                  <el-icon
+                    class="skill-project-section__arrow"
+                    :class="{
+                      'skill-project-section__arrow--collapsed':
+                        isProjectCollapsed(group.key),
+                    }"
+                  >
+                    <ArrowDown />
+                  </el-icon>
+                </button>
                 <span>{{ group.skills.length }} 个技能</span>
               </header>
-              <div class="skill-card-grid">
+              <div
+                v-show="!isProjectCollapsed(group.key)"
+                class="skill-card-grid"
+              >
                 <SkillCard
                   v-for="skill in group.skills"
                   :key="skill.id"
                   :skill="skill"
+                  :favorited="isSkillFavorited(skill.id)"
+                  :favorite-loading="isSkillFavoriteUpdating(skill.id)"
                   @select="openSkillDrawer"
+                  @toggle-favorite="handleToggleFavorite"
                 />
               </div>
             </section>
@@ -110,7 +165,14 @@ function handleSkillContextCommand(command: string | number | object) {
               v-for="skill in filteredSkills"
               :key="skill.id"
               :skill="skill"
+              :favorited="
+                skill.scope === 'local' || isSkillFavorited(skill.id)
+              "
+              :favorite-loading="
+                isSkillFavoriteUpdating(skill.originSkillId || skill.id)
+              "
               @select="openSkillDrawer"
+              @toggle-favorite="handleToggleFavorite"
             />
           </div>
         </div>
@@ -169,7 +231,7 @@ function handleSkillContextCommand(command: string | number | object) {
           </section>
           <section class="skill-info__item">
             <span>来源</span>
-            <strong>{{ sourceLabel(selectedSkill.source) }}</strong>
+            <strong>{{ skillSourceLabel(selectedSkill) }}</strong>
           </section>
           <section class="skill-info__item">
             <span>类型</span>
@@ -337,22 +399,62 @@ function handleSkillContextCommand(command: string | number | object) {
   gap: 12px;
   min-width: 0;
 
+  > span {
+    flex: 0 0 auto;
+    color: var(--ds-color-text-muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+.skill-project-section__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ds-color-text);
+  cursor: pointer;
+  text-align: left;
+
   strong {
     min-width: 0;
     overflow: hidden;
-    color: var(--ds-color-text);
     font-size: 15px;
     font-weight: 800;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  span {
-    flex: 0 0 auto;
-    color: var(--ds-color-text-muted);
-    font-size: 13px;
-    font-weight: 600;
+  &:hover,
+  &:focus-visible {
+    color: var(--ds-state-active-color);
   }
+
+  &:focus-visible {
+    border-radius: 2px;
+    outline: 2px solid var(--ds-state-active-border);
+    outline-offset: 3px;
+  }
+}
+
+.skill-project-section__arrow {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  font-size: 12px;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.skill-project-section__arrow--collapsed {
+  transform: rotate(-90deg);
 }
 
 .detail-actions {

@@ -7,6 +7,20 @@ import { refreshRevision, selectedTool } from '../../state/app-state';
 export type McpServerKind = 'command' | 'remote' | 'other';
 export type McpServerFilter = 'all' | McpServerKind;
 
+export interface McpServerDraft {
+  name: string;
+  transport: 'stdio' | 'http';
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  envVars: string[];
+  cwd: string;
+  url: string;
+  bearerTokenEnvVar: string;
+  headers: Record<string, string>;
+  envHeaders: Record<string, string>;
+}
+
 export interface McpServerSummary {
   id: string;
   fileId: string;
@@ -39,6 +53,7 @@ export function useMcpServers() {
   const configDetails = ref<ConfigFileDetail[]>([]);
   const selectedServerId = ref('');
   const draftServer = ref<unknown>({});
+  const createDraft = ref<McpServerDraft>(emptyMcpServerDraft());
   const serverFilter = ref<McpServerFilter>('all');
   const loadingList = ref(false);
   const saving = ref(false);
@@ -50,6 +65,7 @@ export function useMcpServers() {
   });
   const selectedServer = computed(() => servers.value.find(server => server.id === selectedServerId.value));
   const isDirty = computed(() => !!selectedServer.value && stableString(draftServer.value) !== stableString(selectedServer.value.value));
+  const createTarget = computed(() => selectCreateTarget(configDetails.value, selectedTool.value));
 
   /**
    * Loads editable configuration files and extracts top-level MCP server entries.
@@ -57,8 +73,7 @@ export function useMcpServers() {
   async function loadMcpServers() {
     loadingList.value = true;
     try {
-      const files = await api.configFiles(selectedTool.value);
-      configDetails.value = await Promise.all(files.map(file => api.configFile(file.id)));
+      configDetails.value = await api.editableConfigDetails(selectedTool.value);
       if (!servers.value.some(server => server.id === selectedServerId.value)) {
         selectedServerId.value = '';
         draftServer.value = {};
@@ -84,6 +99,44 @@ export function useMcpServers() {
   function resetDraft() {
     if (!selectedServer.value) return;
     draftServer.value = clone(selectedServer.value.value);
+  }
+
+  /** Resets the new-server form to an empty STDIO configuration. */
+  function resetCreateDraft() {
+    createDraft.value = emptyMcpServerDraft();
+  }
+
+  /** Adds a server to the selected tool's primary editable config file. */
+  async function createServer() {
+    const detail = createTarget.value;
+    const name = createDraft.value.name.trim();
+    if (!detail || !name) return false;
+    const groupKey = mcpGroupKey(detail.tool);
+    const model = isRecord(detail.formModel) ? detail.formModel : {};
+    const group = isRecord(model[groupKey]) ? model[groupKey] : {};
+    if (Object.prototype.hasOwnProperty.call(group, name)) {
+      ElMessage.error(`MCP 服务器“${name}”已存在`);
+      return false;
+    }
+
+    saving.value = true;
+    try {
+      const response = await api.saveConfigFile(detail.id, {
+        expectedHash: detail.hash,
+        mode: 'parsed',
+        parsed: modelWithServer(detail, name, draftToConfig(createDraft.value, detail.tool)),
+      });
+      replaceDetail(response.detail);
+      const created = servers.value.find(item => item.fileId === detail.id && item.name === name);
+      if (created) selectServer(created.id);
+      ElMessage.success(`MCP 服务器已新增，备份：${response.backupPath}`);
+      return true;
+    } catch (error) {
+      ElMessage.error(error instanceof Error ? error.message : String(error));
+      return false;
+    } finally {
+      saving.value = false;
+    }
   }
 
   /**
@@ -157,6 +210,8 @@ export function useMcpServers() {
     filteredServers,
     selectedServer,
     draftServer,
+    createDraft,
+    createTarget,
     serverFilter,
     mcpFilterOptions,
     loadingList,
@@ -165,6 +220,8 @@ export function useMcpServers() {
     loadMcpServers,
     selectServer,
     resetDraft,
+    resetCreateDraft,
+    createServer,
     saveServer,
     mcpFieldMeta,
     toolLabel,
@@ -178,9 +235,10 @@ export function useMcpServers() {
  */
 function mcpServersFromDetail(detail: ConfigFileDetail): McpServerSummary[] {
   const model = isRecord(detail.formModel) ? detail.formModel : {};
-  const group = isRecord(model[MCP_SERVERS_KEY]) ? model[MCP_SERVERS_KEY] : {};
+  const groupKey = mcpGroupKey(detail.tool);
+  const group = isRecord(model[groupKey]) ? model[groupKey] : {};
   return Object.entries(group).map(([name, value]) => ({
-    id: `${detail.id}:${MCP_SERVERS_KEY}:${name}`,
+    id: `${detail.id}:${groupKey}:${name}`,
     fileId: detail.id,
     tool: detail.tool,
     name,
@@ -198,14 +256,91 @@ function mcpServersFromDetail(detail: ConfigFileDetail): McpServerSummary[] {
 function modelWithServer(detail: ConfigFileDetail, serverName: string, value: unknown) {
   const baseModel = clone(detail.formModel ?? {});
   const base = isRecord(baseModel) ? baseModel : {};
-  const group = isRecord(base[MCP_SERVERS_KEY]) ? base[MCP_SERVERS_KEY] : {};
+  const groupKey = mcpGroupKey(detail.tool);
+  const group = isRecord(base[groupKey]) ? base[groupKey] : {};
   return {
     ...base,
-    [MCP_SERVERS_KEY]: {
+    [groupKey]: {
       ...group,
       [serverName]: clone(value),
     },
   };
+}
+
+/** Returns the MCP collection key used by each tool's configuration format. */
+function mcpGroupKey(tool: AiTool) {
+  return tool === 'claude' ? 'mcpServers' : MCP_SERVERS_KEY;
+}
+
+/** Picks the config that already owns MCP entries, then falls back to the primary config. */
+function selectCreateTarget(details: ConfigFileDetail[], tool: AiTool) {
+  const candidates = details.filter(detail => detail.tool === tool && detail.editable && isRecord(detail.formModel));
+  if (tool === 'claude') return candidates.find(detail => detail.name === '.claude.json');
+  const groupKey = mcpGroupKey(tool);
+  return candidates.find(detail => isRecord((detail.formModel as Record<string, unknown>)[groupKey]))
+    || candidates.find(detail => detail.category === 'config');
+}
+
+/** Creates the form's stable empty shape. */
+export function emptyMcpServerDraft(): McpServerDraft {
+  return {
+    name: '', transport: 'stdio', command: '', args: [], env: {}, envVars: [], cwd: '',
+    url: '', bearerTokenEnvVar: '', headers: {}, envHeaders: {},
+  };
+}
+
+/** Converts a tool config entry into the normalized drawer form. */
+export function configToDraft(name: string, value: unknown): McpServerDraft {
+  const source = isRecord(value) ? value : {};
+  const transport = typeof source.command === 'string' ? 'stdio' : 'http';
+  return {
+    ...emptyMcpServerDraft(),
+    name,
+    transport,
+    command: stringValue(source.command),
+    args: stringArray(source.args),
+    env: stringRecord(source.env),
+    envVars: stringArray(source.env_vars),
+    cwd: stringValue(source.cwd),
+    url: stringValue(source.url || source.base_url),
+    bearerTokenEnvVar: stringValue(source.bearer_token_env_var),
+    headers: stringRecord(source.http_headers || source.headers),
+    envHeaders: stringRecord(source.env_http_headers),
+  };
+}
+
+/** Converts normalized form data to the selected tool's native MCP config shape. */
+export function draftToConfig(draft: McpServerDraft, tool: AiTool, original: unknown = {}) {
+  const next = isRecord(original) ? { ...original } : {};
+  const args = draft.args.map(item => item.trim()).filter(Boolean);
+  const envVars = draft.envVars.map(item => item.trim()).filter(Boolean);
+  const env = cleanRecord(draft.env);
+  const headers = cleanRecord(draft.headers);
+  const envHeaders = cleanRecord(draft.envHeaders);
+  for (const key of ['command', 'args', 'env', 'env_vars', 'cwd', 'url', 'base_url', 'bearer_token_env_var', 'http_headers', 'env_http_headers', 'headers', 'type']) delete next[key];
+  if (draft.transport === 'stdio') {
+    next.command = draft.command.trim();
+    if (args.length) next.args = args;
+    if (Object.keys(env).length) next.env = env;
+    if (draft.cwd.trim()) next.cwd = draft.cwd.trim();
+    if (tool === 'codex' && envVars.length) next.env_vars = envVars;
+  } else {
+    next.url = draft.url.trim();
+    if (tool === 'claude') next.type = 'http';
+    if (draft.bearerTokenEnvVar.trim() && tool === 'codex') next.bearer_token_env_var = draft.bearerTokenEnvVar.trim();
+    if (Object.keys(headers).length) next[tool === 'claude' ? 'headers' : 'http_headers'] = headers;
+    if (Object.keys(envHeaders).length && tool === 'codex') next.env_http_headers = envHeaders;
+  }
+  return next;
+}
+
+function stringValue(value: unknown) { return typeof value === 'string' ? value : ''; }
+function stringArray(value: unknown) { return Array.isArray(value) ? value.map(String) : []; }
+function stringRecord(value: unknown) {
+  return isRecord(value) ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, String(item)])) : {};
+}
+function cleanRecord(value: Record<string, string>) {
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key.trim(), item.trim()]).filter(([key]) => key));
 }
 
 /**

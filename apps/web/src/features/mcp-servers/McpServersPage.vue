@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { Close } from '@element-plus/icons-vue';
-import { nextTick, shallowReactive, shallowRef, useTemplateRef } from 'vue';
-import ConfigObjectEditor from '../../components/config/ConfigObjectEditor.vue';
+import { Close, Plus } from '@element-plus/icons-vue';
+import { computed, nextTick, shallowReactive, shallowRef, useTemplateRef } from 'vue';
 import McpServerCard from './components/McpServerCard.vue';
-import { useMcpServers } from './use-mcp-servers';
+import McpServerForm from './components/McpServerForm.vue';
+import { configToDraft, draftToConfig, useMcpServers } from './use-mcp-servers';
 
 const {
   servers,
   filteredServers,
   selectedServer,
   draftServer,
+  createDraft,
+  createTarget,
   serverFilter,
   mcpFilterOptions,
   loadingList,
@@ -18,8 +20,9 @@ const {
   loadMcpServers,
   selectServer,
   resetDraft,
+  resetCreateDraft,
+  createServer,
   saveServer,
-  mcpFieldMeta,
   toolLabel,
   kindLabel,
   kindTagType,
@@ -31,6 +34,7 @@ interface DropdownExpose {
 }
 
 const serverDrawerVisible = shallowRef(false);
+const drawerMode = shallowRef<'detail' | 'create'>('detail');
 const serverContextDropdownRef = useTemplateRef<DropdownExpose>(
   'serverContextDropdown',
 );
@@ -44,8 +48,37 @@ const serverContextVirtualRef = {
  * Opens the side drawer and loads the selected MCP server draft.
  */
 function openServerDrawer(serverId: string) {
+  drawerMode.value = 'detail';
   serverDrawerVisible.value = true;
   selectServer(serverId);
+}
+
+/** Opens the drawer with a clean server form for the selected tool. */
+function openCreateDrawer() {
+  drawerMode.value = 'create';
+  resetCreateDraft();
+  serverDrawerVisible.value = true;
+}
+
+const editDraft = computed({
+  get: () => configToDraft(selectedServer.value?.name || '', draftServer.value),
+  set: value => {
+    if (!selectedServer.value) return;
+    draftServer.value = draftToConfig(value, selectedServer.value.tool, draftServer.value);
+  },
+});
+const activeTool = computed(() => drawerMode.value === 'create' ? createTarget.value?.tool : selectedServer.value?.tool);
+const canSaveCreate = computed(() => {
+  if (!createTarget.value || !createDraft.value.name.trim()) return false;
+  return createDraft.value.transport === 'stdio'
+    ? !!createDraft.value.command.trim()
+    : !!createDraft.value.url.trim();
+});
+
+/** Creates the server and switches the drawer to its saved detail. */
+async function handleCreateServer() {
+  if (!await createServer()) return;
+  drawerMode.value = 'detail';
 }
 
 /**
@@ -71,9 +104,10 @@ function handleServerContextCommand(command: string | number | object) {
   <section class="mcp-servers-page">
     <header class="mcp-toolbar">
       <el-segmented v-model="serverFilter" :options="mcpFilterOptions" />
-      <span class="mcp-toolbar__count">
-        {{ filteredServers.length }} / {{ servers.length }}
-      </span>
+      <div class="mcp-toolbar__actions">
+        <span class="mcp-toolbar__count">{{ filteredServers.length }} / {{ servers.length }}</span>
+        <el-button type="primary" :icon="Plus" :disabled="!createTarget" @click="openCreateDrawer">新增</el-button>
+      </div>
     </header>
 
     <div
@@ -129,19 +163,16 @@ function handleServerContextCommand(command: string | number | object) {
       size="58%"
       :with-header="false"
     >
-      <section
-        v-if="selectedServer"
-        class="mcp-drawer__content"
-      >
+      <section v-if="activeTool" class="mcp-drawer__content">
         <header class="mcp-drawer__header">
           <div class="mcp-drawer__heading">
             <span class="mcp-drawer__kicker">MCP Server</span>
-            <h2>{{ selectedServer.name }}</h2>
-            <p>{{ selectedServer.commandPreview }}</p>
+            <h2>{{ drawerMode === 'create' ? '新增 MCP 服务器' : selectedServer?.name }}</h2>
+            <p>{{ drawerMode === 'create' ? '配置本地命令或远程 HTTP 连接' : selectedServer?.commandPreview }}</p>
           </div>
         </header>
 
-        <div class="mcp-info">
+        <div v-if="drawerMode === 'detail' && selectedServer" class="mcp-info">
           <section class="mcp-info__item">
             <span>来源</span>
             <strong>{{ toolLabel(selectedServer.tool) }}</strong>
@@ -157,29 +188,30 @@ function handleServerContextCommand(command: string | number | object) {
         </div>
 
         <div class="mcp-editor">
-          <div class="mcp-editor__label">
-            <span>服务器配置</span>
-            <small>编辑后保存到对应配置文件的 mcp_servers 项</small>
-          </div>
-          <ConfigObjectEditor
-            :model-value="draftServer"
-            :path="[selectedServer.tool, 'mcp_servers', selectedServer.name]"
-            :field-meta="mcpFieldMeta"
-            @update:model-value="draftServer = $event"
+          <McpServerForm
+            v-if="drawerMode === 'create'"
+            v-model="createDraft"
+            :tool="activeTool"
+          />
+          <McpServerForm
+            v-else-if="selectedServer"
+            v-model="editDraft"
+            :tool="selectedServer.tool"
+            name-readonly
           />
         </div>
 
         <footer class="mcp-drawer__footer">
-          <el-tag v-if="isDirty" size="small" type="warning">未保存</el-tag>
+          <el-tag v-if="drawerMode === 'detail' && isDirty" size="small" type="warning">未保存</el-tag>
           <div class="detail-actions">
-            <el-button @click="resetDraft">撤销修改</el-button>
+            <el-button v-if="drawerMode === 'detail'" @click="resetDraft">撤销修改</el-button>
             <el-button
               type="primary"
-              :disabled="!isDirty"
+              :disabled="drawerMode === 'create' ? !canSaveCreate : !isDirty"
               :loading="saving"
-              @click="saveServer"
+              @click="drawerMode === 'create' ? handleCreateServer() : saveServer()"
             >
-              保存服务器
+              {{ drawerMode === 'create' ? '新增服务器' : '保存服务器' }}
             </el-button>
             <el-button
               :icon="Close"
@@ -250,6 +282,12 @@ function handleServerContextCommand(command: string | number | object) {
   color: var(--ds-color-text-muted);
   font-size: 13px;
   font-weight: 600;
+}
+
+.mcp-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .mcp-card-context {

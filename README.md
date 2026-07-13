@@ -13,6 +13,7 @@
 
 - `GET /api/projects` 返回项目聚合列表，来自本地索引库中的全量会话记录。
 - `GET /api/sessions` 只返回分页会话明细，支持 `tool`、`projectPath`、`keyword` 等筛选。
+- `GET /api/skills/local` 返回跨 Codex、Claude 聚合的本地收藏技能；`POST`/`DELETE /api/skills/:id/favorite` 将完整技能目录加入或移出 `.data/local-skills`。
 - 左侧项目树不要直接用分页会话数组聚合，避免只显示当前页的数据。
 - 点击项目后，再带 `projectPath` 去请求会话列表。
 

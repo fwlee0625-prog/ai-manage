@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import type { SkillSummary } from "@ai-manage/shared";
+import { Loading, Star, StarFilled } from "@element-plus/icons-vue";
 
 const props = defineProps<{
   /** Skill summary rendered by this card. */
   skill: SkillSummary;
+  /** Whether this source skill already has a local favorite copy. */
+  favorited?: boolean;
+  /** Whether the local copy request is currently running. */
+  favoriteLoading?: boolean;
 }>();
 
 const emit = defineEmits<{
   select: [skillId: string];
+  toggleFavorite: [originSkillId: string];
 }>();
 
 /**
@@ -25,6 +31,14 @@ function handleKeyboardSelect(event: KeyboardEvent) {
   selectSkill();
 }
 
+/**
+ * Toggles the local copy without triggering the card detail action.
+ */
+function toggleFavorite() {
+  if (props.favoriteLoading) return;
+  emit("toggleFavorite", props.skill.originSkillId || props.skill.id);
+}
+
 function sourceLabel(source: SkillSummary["source"]) {
   return source === "codex" ? "Codex" : "Claude";
 }
@@ -39,24 +53,46 @@ function sourceLabel(source: SkillSummary["source"]) {
     @keydown.enter="handleKeyboardSelect"
     @keydown.space="handleKeyboardSelect"
   >
+    <button
+      class="skill-card__favorite"
+      :class="{ 'skill-card__favorite--active': favorited || skill.scope === 'local' }"
+      type="button"
+      :aria-label="favorited || skill.scope === 'local' ? '取消收藏' : '收藏到本地'"
+      :aria-pressed="favorited || skill.scope === 'local'"
+      :title="favorited || skill.scope === 'local' ? '取消收藏' : '收藏到本地'"
+      :disabled="favoriteLoading"
+      @click.stop="toggleFavorite"
+      @keydown.stop
+    >
+      <el-icon :class="{ 'is-loading': favoriteLoading }">
+        <Loading v-if="favoriteLoading" />
+        <StarFilled v-else-if="favorited || skill.scope === 'local'" />
+        <Star v-else />
+      </el-icon>
+    </button>
     <span class="skill-card__main">
       <strong>{{ skill.name }}</strong>
       <small>{{ skill.description || "暂无简介" }}</small>
     </span>
     <span class="skill-card__footer">
       <span class="skill-card__tags">
-        <el-tag
-          size="small"
-          :type="skill.source === 'codex' ? 'primary' : 'success'"
-        >
-          {{ sourceLabel(skill.source) }}
+        <el-tag v-if="skill.scope === 'local'" size="small" type="warning">
+          本地
         </el-tag>
-        <el-tag v-if="skill.system" size="small" type="info">
-          系统
-        </el-tag>
-        <el-tag v-else size="small" type="warning">
-          {{ skill.projectName || "项目" }}
-        </el-tag>
+        <template v-else>
+          <el-tag
+            size="small"
+            :type="skill.source === 'codex' ? 'primary' : 'success'"
+          >
+            {{ sourceLabel(skill.source) }}
+          </el-tag>
+          <el-tag v-if="skill.system" size="small" type="info">
+            系统
+          </el-tag>
+          <el-tag v-else size="small" type="warning">
+            {{ skill.projectName || "项目" }}
+          </el-tag>
+        </template>
       </span>
     </span>
   </div>
@@ -64,6 +100,7 @@ function sourceLabel(source: SkillSummary["source"]) {
 
 <style scoped lang="scss">
 .skill-card {
+  position: relative;
   display: flex;
   min-height: 154px;
   flex-direction: column;
@@ -88,10 +125,49 @@ function sourceLabel(source: SkillSummary["source"]) {
   }
 }
 
+.skill-card__favorite {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ds-color-text-muted);
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--ds-color-surface-soft);
+    color: var(--el-color-warning);
+    outline: none;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--ds-state-active-border);
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.72;
+  }
+}
+
+.skill-card__favorite--active {
+  color: var(--el-color-warning);
+}
+
 .skill-card__main {
   display: flex;
   min-width: 0;
   width: 100%;
+  padding-right: 30px;
+  box-sizing: border-box;
   flex-direction: column;
   gap: 8px;
 

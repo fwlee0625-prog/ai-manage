@@ -7,6 +7,7 @@ import { DATA_DIR, HOME_DIR } from '../utils.js';
 export class PathGuard {
   readonly codexRoot = resolve(HOME_DIR, '.codex');
   readonly claudeRoot = resolve(HOME_DIR, '.claude');
+  readonly claudeGlobalConfigPath = resolve(HOME_DIR, '.claude.json');
   readonly agentsRoot = resolve(HOME_DIR, '.agents');
   readonly dataRoot = DATA_DIR;
   readonly codexAuthPath = resolve(this.codexRoot, 'auth.json');
@@ -16,6 +17,7 @@ export class PathGuard {
     resolve(this.claudeRoot, 'settings.json'),
     resolve(this.claudeRoot, 'settings.local.json'),
     resolve(this.claudeRoot, 'CLAUDE.md'),
+    this.claudeGlobalConfigPath,
   ]);
 
   allowedRoots(): string[] {
@@ -24,7 +26,8 @@ export class PathGuard {
 
   assertReadable(filePath: string): string {
     const resolved = resolve(filePath);
-    const allowed = this.allowedRoots().some(root => this.isInside(resolved, root));
+    const allowed = resolved === this.claudeGlobalConfigPath
+      || this.allowedRoots().some(root => this.isInside(resolved, root));
     if (!allowed) {
       throw new ForbiddenException(`Path is outside allowed roots: ${filePath}`);
     }

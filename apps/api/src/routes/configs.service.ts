@@ -40,10 +40,17 @@ export class ConfigsService {
     throw new NotFoundException('Config file not found');
   }
 
+  /** Lists editable configuration details used by focused feature editors. */
+  async editableConfigDetails(tool: AiTool): Promise<ConfigFileDetail[]> {
+    const files = await this.requireAdapter(tool).listConfigFiles();
+    const editable = files.filter(file => file.editable);
+    return Promise.all(editable.map(file => this.configFile(file.id)));
+  }
+
   /** Saves an editable config file with optimistic hash conflict checks. */
   async saveConfigFile(id: string, body: SaveConfigFileRequest): Promise<SaveConfigFileResponse> {
     const summary = await this.findConfigSummary(id);
-    if (!summary.editable || summary.hiddenFromConfigPage) {
+    if (!summary.editable) {
       throw new BadRequestException('Config file is not editable');
     }
     this.pathGuard.assertWritableConfig(summary.path);

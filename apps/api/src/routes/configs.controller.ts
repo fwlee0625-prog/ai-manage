@@ -12,6 +12,12 @@ export class ConfigsController {
     return this.service.configFiles(tool);
   }
 
+  /** Lists editable config details for feature-specific editors such as MCP. */
+  @Get('editable-details')
+  editableConfigDetails(@Query('tool') tool: AiTool) {
+    return this.service.editableConfigDetails(tool);
+  }
+
   /** Reads OPENAI_API_KEY from Codex auth.json. */
   @Get('codex-auth/openai-api-key')
   codexOpenAiApiKey() {
