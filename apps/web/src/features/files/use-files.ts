@@ -21,7 +21,16 @@ export function useFiles() {
   const parentPath = computed(() =>
     currentPath.value.split('/').slice(0, -1).join('/'),
   );
-  const currentDirectoryLabel = computed(() => currentPath.value || '.');
+  const breadcrumbs = computed(() => {
+    const segments = currentPath.value.split('/').filter(Boolean);
+    return [
+      { label: '根目录', path: '' },
+      ...segments.map((label, index) => ({
+        label,
+        path: segments.slice(0, index + 1).join('/'),
+      })),
+    ];
+  });
 
   /**
    * Builds a stable tooltip label for file entries.
@@ -111,7 +120,7 @@ export function useFiles() {
     preview,
     loadingFiles,
     loadingPreview,
-    currentDirectoryLabel,
+    breadcrumbs,
     entryPathLabel,
     loadDirectory,
     openDirectory,

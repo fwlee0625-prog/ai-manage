@@ -5,17 +5,40 @@
         <DsPanel
           fill
           class="file-list-panel"
-          :title="currentDirectoryLabel"
-          description="目录浏览与文件选择"
         >
+          <template #header>
+            <div class="file-path-header">
+              <el-button
+                class="file-path-header__back"
+                :icon="ArrowLeft"
+                :disabled="!currentPath"
+                circle
+                title="返回上级"
+                @click="openDirectory(parentPath)"
+              />
+              <nav class="file-breadcrumb" aria-label="当前文件路径">
+                <ElBreadcrumb separator="/">
+                  <ElBreadcrumbItem
+                    v-for="(item, index) in breadcrumbs"
+                    :key="item.path || 'root'"
+                  >
+                    <button
+                      v-if="index < breadcrumbs.length - 1"
+                      class="file-breadcrumb__link"
+                      type="button"
+                      @click="openDirectory(item.path)"
+                    >
+                      {{ item.label }}
+                    </button>
+                    <span v-else class="file-breadcrumb__current">
+                      {{ item.label }}
+                    </span>
+                  </ElBreadcrumbItem>
+                </ElBreadcrumb>
+              </nav>
+            </div>
+          </template>
           <template #actions>
-            <el-button
-              v-if="currentPath"
-              :icon="ArrowLeft"
-              circle
-              title="返回上级"
-              @click="openDirectory(parentPath)"
-            />
             <el-button
               :icon="Refresh"
               :loading="loadingFiles"
@@ -125,6 +148,7 @@ import {
   Link,
   Refresh,
 } from "@element-plus/icons-vue";
+import { ElBreadcrumb, ElBreadcrumbItem } from 'element-plus';
 import { DsCodeBlock, DsPanel, DsSplitView } from '../../components/design-system';
 import { useFiles } from './use-files';
 
@@ -135,7 +159,7 @@ const {
   preview,
   loadingFiles,
   loadingPreview,
-  currentDirectoryLabel,
+  breadcrumbs,
   entryPathLabel,
   loadDirectory,
   openDirectory,
@@ -155,6 +179,71 @@ const {
   min-height: 0;
   flex: 1;
   flex-direction: column;
+}
+
+.file-path-header {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-path-header__back {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+}
+
+.file-path-header__back :deep(.el-icon) {
+  font-size: 12px;
+}
+
+.file-breadcrumb {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.file-breadcrumb :deep(.el-breadcrumb) {
+  display: inline-flex;
+  min-width: max-content;
+  align-items: center;
+}
+
+.file-breadcrumb :deep(.el-breadcrumb__separator) {
+  display: inline-flex;
+  margin: 0 8px;
+  color: var(--ds-color-text-muted);
+  font-weight: 500;
+}
+
+.file-breadcrumb :deep(.el-breadcrumb__item:last-child .el-breadcrumb__separator) {
+  display: none;
+}
+
+.file-breadcrumb__link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ds-color-text-muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.file-breadcrumb__link:hover,
+.file-breadcrumb__link:focus-visible {
+  color: var(--ds-state-active-color);
+  outline: none;
+}
+
+.file-breadcrumb__current {
+  color: var(--ds-color-text);
+  font-weight: 600;
 }
 
 .file-name-cell {
