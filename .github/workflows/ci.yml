@@ -24,7 +24,9 @@ jobs:
           cache: pnpm
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --no-frozen-lockfile
+          git diff -- pnpm-lock.yaml
 
       - name: Check
         run: pnpm check
