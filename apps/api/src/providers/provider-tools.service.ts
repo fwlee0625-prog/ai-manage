@@ -5,6 +5,7 @@ import type {
   ProviderModelsResponse,
   ProviderTestResponse,
 } from '@ai-manage/shared';
+import { AccountsService } from '../accounts/accounts.service.js';
 import { CredentialStoreService } from '../credentials/credential-store.service.js';
 import { ProvidersRepository } from './providers.repository.js';
 
@@ -13,12 +14,31 @@ export class ProviderToolsService {
   constructor(
     private readonly providers: ProvidersRepository,
     private readonly credentials: CredentialStoreService,
+    private readonly accounts: AccountsService,
   ) {}
 
   /** Tests a saved provider without returning upstream response bodies or secret material. */
   async testProvider(id: string): Promise<ProviderTestResponse> {
     const provider = await this.requireProvider(id);
     try {
+      if (provider.authMode === 'managed_account') {
+        if (!provider.accountId) throw new BadRequestException('Managed account binding is required');
+        await this.accounts.authBundle(provider.accountId);
+        return {
+          ok: true,
+          healthStatus: 'healthy',
+          stage: 'connect',
+          message: '托管账号凭据刷新检查通过',
+        };
+      }
+      if (provider.authMode === 'native_login') {
+        return {
+          ok: true,
+          healthStatus: 'unknown',
+          stage: 'validate',
+          message: '原生登录由 CLI 管理；Provider 配置检查通过',
+        };
+      }
       const response = await this.fetchModels(provider, await this.credentialFor(provider));
       return response.ok
         ? { ok: true, healthStatus: 'healthy', stage: 'connect', status: response.status, message: '连接与认证检查通过' }
@@ -41,6 +61,9 @@ export class ProviderToolsService {
   /** Fetches model ids for a saved provider. */
   async modelsForProvider(id: string): Promise<ProviderModelsResponse> {
     const provider = await this.requireProvider(id);
+    if (provider.authMode === 'managed_account' || provider.authMode === 'native_login') {
+      return { models: [] };
+    }
     return { models: await this.readModelIds(await this.fetchModels(provider, await this.credentialFor(provider))) };
   }
 
