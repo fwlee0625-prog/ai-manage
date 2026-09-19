@@ -20,7 +20,7 @@ function healthLabel(status: ProviderHealthStatus = 'unknown') {
     invalid_config: '配置异常',
   }[status];
 }
-function healthType(status: ProviderHealthStatus = 'unknown') {
+function healthType(status: ProviderHealthStatus = 'unknown'): 'success' | 'info' | 'warning' {
   if (status === 'healthy') return 'success';
   if (status === 'unknown') return 'info';
   return 'warning';
