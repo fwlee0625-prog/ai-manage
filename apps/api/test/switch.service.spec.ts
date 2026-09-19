@@ -35,7 +35,7 @@ describe('SwitchService', () => {
     const writer = new LiveFileWriterService(PathGuard.forRoots(codexRoot, claudeRoot));
     const runtimeRepo = new RuntimeRepository(manage);
     const detector = new RuntimeDetectorService(writer, providersRepo, runtimeRepo, accountsRepo);
-    const accounts = { authBundle: async () => { throw new Error('not used'); } } as AccountsService;
+    const accounts = { authBundle: async () => { throw new Error('not used'); } } as unknown as AccountsService;
     const service = new SwitchService(providersRepo, credentials, accounts, writer, new SnapshotService(writer), detector, runtimeRepo);
 
     const result = await service.switchProvider({ tool: 'codex', providerId: target.id });
@@ -45,6 +45,8 @@ describe('SwitchService', () => {
     expect(raw).toContain('notify = ["keep"]');
     expect(raw).toContain('[projects."/tmp/demo"]');
     expect(await runtimeRepo.active('codex')).toMatchObject({ providerId: target.id });
-    expect(JSON.parse(await readFile(resolve(codexRoot, 'auth.json'), 'utf8')).tokens).toEqual({ keep: true });
+    const auth = JSON.parse(await readFile(resolve(codexRoot, 'auth.json'), 'utf8')) as Record<string, unknown>;
+    expect(auth).toMatchObject({ auth_mode: 'apikey', OPENAI_API_KEY: 'secret' });
+    expect(auth.tokens).toBeUndefined();
   });
 });
