@@ -70,7 +70,11 @@ export class ProviderToolsService {
     if (!provider.endpoint) throw new BadRequestException('Provider endpoint is required');
     const base = new URL(provider.endpoint);
     if (!['http:', 'https:'].includes(base.protocol)) throw new BadRequestException('Only http/https endpoints are supported');
-    const url = new URL(base.toString().replace(/\/$/, '') + '/models');
+    const path = base.pathname.replace(/\/$/, '');
+    base.pathname = provider.tool === 'claude' && (!path || path === '/')
+      ? '/v1/models'
+      : `${path}/models`.replace(/\/+/g, '/');
+    const url = base;
     const headers: Record<string, string> = { accept: 'application/json' };
     if (credential) {
       if (provider.tool === 'claude') {
@@ -97,7 +101,7 @@ export class ProviderToolsService {
 }
 
 function safeError(error: unknown): string {
-  if (error instanceof DOMException && error.name === 'TimeoutError') return '连接超时';
+  if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) return '连接超时';
   if (error instanceof Error) {
     if (error.message.includes('HTTP')) return error.message;
     return '连接失败';
