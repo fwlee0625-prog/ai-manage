@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import type { AccountsService } from '../src/accounts/accounts.service.js';
+import { AccountsRepository } from '../src/accounts/accounts.repository.js';
 import { CredentialStoreService } from '../src/credentials/credential-store.service.js';
 import { ManageRepository } from '../src/database/manage.repository.js';
 import { PathGuard } from '../src/fs/path-guard.js';
@@ -27,12 +29,13 @@ describe('SwitchService', () => {
     await manage.init();
     const credentials = CredentialStoreService.forFile(resolve(root, 'credentials.json'));
     const providersRepo = new ProvidersRepository(manage);
-    const providers = new ProvidersService(providersRepo, credentials);
+    const providers = new ProvidersService(providersRepo, credentials, new AccountsRepository(manage));
     const target = await providers.create({ tool: 'codex', name: 'Target', providerType: 'custom', endpoint: 'https://example.test', apiProtocol: 'responses', defaultModel: 'gpt-x', apiKey: 'secret' });
     const writer = new LiveFileWriterService(PathGuard.forRoots(codexRoot, claudeRoot));
     const runtimeRepo = new RuntimeRepository(manage);
     const detector = new RuntimeDetectorService(writer, providersRepo, runtimeRepo);
-    const service = new SwitchService(providersRepo, credentials, writer, new SnapshotService(writer), detector, runtimeRepo);
+    const accounts = { authBundle: async () => { throw new Error('not used'); } } as AccountsService;
+    const service = new SwitchService(providersRepo, credentials, accounts, writer, new SnapshotService(writer), detector, runtimeRepo);
 
     const result = await service.switchProvider({ tool: 'codex', providerId: target.id });
 

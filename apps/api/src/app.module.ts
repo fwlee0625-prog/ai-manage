@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AccountBindingsRepository } from './accounts/account-bindings.repository.js';
+import { AccountResolverService } from './accounts/account-resolver.service.js';
 import { AccountsController } from './accounts/accounts.controller.js';
 import { AccountsRepository } from './accounts/accounts.repository.js';
 import { AccountsService } from './accounts/accounts.service.js';
@@ -48,6 +50,6 @@ import { TrashController } from './routes/trash.controller.js';
 
 @Module({
   controllers: [ToolsController, AccountsController, ConfigsController, ProvidersController, ProviderToolsController, RuntimeController, SkillsController, SessionsController, ProjectsController, TerminalsController, FilesController, TrashController, IndexingController, LogsController],
-  providers: [AdapterRegistry, AccountsRepository, AccountsService, CodexOAuthService, CodexOAuthStoreService, CodexAdapter, ClaudeAdapter, PathGuard, IndexRepository, ManageRepository, IndexingService, TrashService, ToolsService, IndexRefreshService, ProjectsService, SessionsService, TerminalsService, TerminalsWebSocketServer, LogsService, ConfigsService, SkillsService, FilesService, CredentialStoreService, ProvidersRepository, ProvidersService, ProviderImportService, ProviderToolsService, RuntimeRepository, LiveFileWriterService, SnapshotService, RuntimeDetectorService, SwitchService],
+  providers: [AdapterRegistry, AccountBindingsRepository, AccountResolverService, AccountsRepository, AccountsService, CodexOAuthService, CodexOAuthStoreService, CodexAdapter, ClaudeAdapter, PathGuard, IndexRepository, ManageRepository, IndexingService, TrashService, ToolsService, IndexRefreshService, ProjectsService, SessionsService, TerminalsService, TerminalsWebSocketServer, LogsService, ConfigsService, SkillsService, FilesService, CredentialStoreService, ProvidersRepository, ProvidersService, ProviderImportService, ProviderToolsService, RuntimeRepository, LiveFileWriterService, SnapshotService, RuntimeDetectorService, SwitchService],
 })
 export class AppModule {}

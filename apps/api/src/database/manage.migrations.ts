@@ -63,5 +63,26 @@ export const MANAGE_MIGRATIONS: DatabaseMigration[] = [{
     CREATE INDEX IF NOT EXISTS idx_managed_accounts_identity
       ON managed_accounts(auth_provider, identity_subject, external_account_id);
   `,
+},
+{
+  version: 3,
+  name: 'add-account-provider-bindings',
+  sql: `
+    CREATE TABLE IF NOT EXISTS account_provider_bindings (
+      id TEXT PRIMARY KEY,
+      provider_id TEXT NOT NULL,
+      account_id TEXT NOT NULL,
+      purpose TEXT NOT NULL DEFAULT 'authentication',
+      priority INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_account_provider_bindings_provider
+      ON account_provider_bindings(provider_id, priority DESC);
+    CREATE INDEX IF NOT EXISTS idx_account_provider_bindings_account
+      ON account_provider_bindings(account_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_account_provider_bindings_unique
+      ON account_provider_bindings(provider_id, account_id, purpose);
+  `,
 }
 ];
