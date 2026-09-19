@@ -38,5 +38,29 @@ export const MANAGE_MIGRATIONS: DatabaseMigration[] = [{
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_switch_history_tool_created ON switch_history(tool, created_at DESC);
+  `,,
+{
+  version: 2,
+  name: 'add-managed-accounts',
+  sql: `
+    CREATE TABLE IF NOT EXISTS managed_accounts (
+      id TEXT PRIMARY KEY,
+      auth_provider TEXT NOT NULL,
+      display_name TEXT,
+      email TEXT,
+      external_account_id TEXT,
+      identity_subject TEXT,
+      authenticated_at TEXT,
+      token_updated_at TEXT,
+      status TEXT NOT NULL,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_managed_accounts_provider
+      ON managed_accounts(auth_provider);
+    CREATE INDEX IF NOT EXISTS idx_managed_accounts_identity
+      ON managed_accounts(auth_provider, identity_subject, external_account_id);
   `,
-}];
+}
+];

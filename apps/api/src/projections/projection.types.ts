@@ -1,8 +1,22 @@
 import type { AiProviderProfile } from '@ai-manage/shared';
 
+export interface ManagedAccountAuthBundle {
+  idToken: string;
+  accessToken: string;
+  refreshToken: string;
+  identity: {
+    email?: string;
+    identitySubject?: string;
+    externalAccountId?: string;
+    planType?: string;
+    isFedramp: boolean;
+  };
+}
+
 export interface ProjectionInput {
   provider: AiProviderProfile;
   credential?: string;
+  account?: ManagedAccountAuthBundle;
   currentConfig: Record<string, unknown>;
   currentAuth?: Record<string, unknown>;
 }

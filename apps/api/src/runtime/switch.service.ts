@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { AiTool, SwitchProviderRequest, SwitchProviderResponse } from '@ai-manage/shared';
+import { AccountsService } from '../accounts/accounts.service.js';
 import { CredentialStoreService } from '../credentials/credential-store.service.js';
 import { buildClaudeProjection } from '../projections/claude-projection.js';
 import { buildCodexProjection } from '../projections/codex-projection.js';
@@ -21,6 +22,7 @@ export class SwitchService {
   constructor(
     private readonly providers: ProvidersRepository,
     private readonly credentials: CredentialStoreService,
+    private readonly accounts: AccountsService,
     private readonly writer: LiveFileWriterService,
     private readonly snapshots: SnapshotService,
     private readonly detector: RuntimeDetectorService,
@@ -49,6 +51,14 @@ export class SwitchService {
 
       stage = 'resolve_auth';
       let credential: string | undefined;
+      let account: Awaited<ReturnType<AccountsService['authBundle']>> | undefined;
+      if (provider.authMode === 'managed_account') {
+        stage = 'preflight_auth';
+        if (provider.tool !== 'codex' || !provider.accountId) {
+          throw new BadRequestException('Managed account auth requires a Codex account binding');
+        }
+        account = await this.accounts.authBundle(provider.accountId);
+      }
       if (provider.authMode === 'api_key') {
         stage = 'preflight_auth';
         if (!provider.credentialId || !await this.credentials.hasCredential(provider.credentialId)) {
@@ -59,7 +69,7 @@ export class SwitchService {
 
       stage = 'project';
       const projection = request.tool === 'codex'
-        ? buildCodexProjection({ provider, credential, currentConfig: live.config, currentAuth: live.auth })
+        ? buildCodexProjection({ provider, credential, account, currentConfig: live.config, currentAuth: live.auth })
         : buildClaudeProjection({ provider, credential, currentConfig: live.config, currentAuth: live.auth });
 
       stage = 'validate';

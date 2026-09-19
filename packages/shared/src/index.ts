@@ -9,6 +9,7 @@ export * from './contracts/logs.js';
 export * from './contracts/files.js';
 export * from './contracts/terminals.js';
 export * from './contracts/providers.js';
+export * from './contracts/accounts.js';
 export * from './contracts/credentials.js';
 export * from './contracts/runtime.js';
 export * from './formatters/project.js';

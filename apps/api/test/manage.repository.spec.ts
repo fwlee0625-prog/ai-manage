@@ -10,7 +10,7 @@ describe('ManageRepository', () => {
     const repository = ManageRepository.forDatabase(resolve(dir, 'manage.sqlite'));
     await repository.init();
     await repository.init();
-    expect(await repository.appliedMigrationVersions()).toEqual([1]);
+    expect(await repository.appliedMigrationVersions()).toEqual([1, 2]);
     const tables = await repository.all<{ name: string }>("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;");
     expect(tables.map(row => row.name)).toEqual(expect.arrayContaining(['providers', 'active_profiles', 'switch_history']));
   });
