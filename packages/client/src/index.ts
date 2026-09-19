@@ -1,5 +1,11 @@
 import type {
-  AiTool,\n  AiProviderProfile,\n  CreateProviderRequest,\n  ImportProvidersRequest,\n  ImportProvidersResponse,\n  ProviderPreset,\n  UpdateProviderRequest,
+  AiTool,
+  AiProviderProfile,
+  CreateProviderRequest,
+  ImportProvidersRequest,
+  ImportProvidersResponse,
+  ProviderPreset,
+  UpdateProviderRequest,
   ClearTrashSessionsResponse,
   CodexOpenAiApiKeyResponse,
   ConfigFileDetail,
