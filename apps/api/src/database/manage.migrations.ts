@@ -38,7 +38,8 @@ export const MANAGE_MIGRATIONS: DatabaseMigration[] = [{
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_switch_history_tool_created ON switch_history(tool, created_at DESC);
-  `,,
+  `,
+},
 {
   version: 2,
   name: 'add-managed-accounts',
