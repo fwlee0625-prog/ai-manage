@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import RuntimeQuickSwitch from "./RuntimeQuickSwitch.vue";
 
 const props = defineProps<{
   pageTitle: string;
@@ -33,6 +34,7 @@ const lastRefreshLabel = computed(() => {
       <div class="app-topbar__page-title">{{ pageTitle }}</div>
     </div>
     <div class="app-topbar__toolbar">
+      <RuntimeQuickSwitch />
       <span class="app-topbar__refresh-time">
         最近刷新：{{ lastRefreshLabel }}
       </span>

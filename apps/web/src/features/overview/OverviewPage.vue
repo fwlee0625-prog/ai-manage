@@ -5,7 +5,7 @@ import { DsMetricCard, DsPanel, DsStatusPill } from '../../components/design-sys
 import { refreshRevision } from '../../state/app-state';
 import { useOverview } from './use-overview';
 
-const { toolStatus, loadTools, toolLabel, formatTime } = useOverview();
+const { toolStatus, runtimes, loadTools, toolLabel, formatTime } = useOverview();
 type MetricAccent = 'brand' | 'info' | 'warning' | 'danger';
 interface OverviewCard {
   id: string;
@@ -91,6 +91,24 @@ const summary = computed(() => {
       </div>
     </DsPanel>
 
+    <DsPanel title="当前运行环境" description="只消费 RuntimeSummary，不读取或拼装 live 配置">
+      <div class="runtime-overview-grid">
+        <article v-for="tool in toolStatus.tools" :key="`runtime-${tool.tool}`" class="runtime-overview-card">
+          <div>
+            <span>{{ toolLabel(tool.tool) }}</span>
+            <strong>{{ runtimes[tool.tool]?.providerName || '未识别 Provider' }}</strong>
+            <p>
+              {{ runtimes[tool.tool]?.model || '未识别模型' }}
+              <template v-if="runtimes[tool.tool]?.accountSummary"> · {{ runtimes[tool.tool]?.accountSummary }}</template>
+            </p>
+          </div>
+          <DsStatusPill :tone="runtimes[tool.tool]?.syncStatus === 'synced' ? 'success' : 'warning'">
+            {{ runtimes[tool.tool]?.syncStatus || 'unmanaged' }}
+          </DsStatusPill>
+        </article>
+      </div>
+    </DsPanel>
+
     <section class="overview-grid">
       <DsMetricCard
         v-for="card in overviewCards"
@@ -156,6 +174,29 @@ const summary = computed(() => {
   gap: 14px;
   margin-top: 16px;
 }
+
+.runtime-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.runtime-overview-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--ds-color-border-soft);
+  border-radius: var(--ds-radius-control);
+  background: var(--ds-color-surface-soft);
+}
+
+.runtime-overview-card div { display: grid; gap: 4px; }
+.runtime-overview-card span { color: var(--ds-color-text-muted); font-size: 12px; }
+.runtime-overview-card strong { font-size: 16px; }
+.runtime-overview-card p { margin: 0; color: var(--ds-color-text-muted); font-size: 12px; }
 
 .overview-grid {
   display: grid;
