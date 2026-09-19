@@ -150,6 +150,29 @@ export function useProviders() {
     finally { modelLoading.value = false; }
   }
 
+  /** Adopts the currently detected live configuration as managed state without rewriting live files. */
+  async function adoptLive() {
+    try {
+      runtime.value = await api.adoptLiveRuntime({ tool: selectedTool.value });
+      await load();
+      ElMessage.success('已采用当前 live 配置');
+    } catch (error) {
+      ElMessage.error(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /** Restores the managed active Provider through the transactional switch engine. */
+  async function restoreManaged() {
+    try {
+      const result = await api.restoreManagedRuntime({ tool: selectedTool.value });
+      if (!result.success) throw new Error(`恢复失败：${result.stage || 'unknown'}`);
+      await load();
+      ElMessage.success('已恢复 AI Manage 托管配置');
+    } catch (error) {
+      ElMessage.error(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   /** Imports existing live provider state without modifying live files. */
   async function importLive() {
     const result = await api.importProviders({ tool: selectedTool.value });
@@ -162,6 +185,6 @@ export function useProviders() {
   return {
     providers, presets, runtime, loading, saving, switchingId, drawerVisible, draft, editing,
     testResult, models, modelLoading, load, openCreate, openEdit, applyPreset, save,
-    switchProvider, duplicate, remove, test, fetchModels, importLive,
+    switchProvider, duplicate, remove, test, fetchModels, adoptLive, restoreManaged, importLive,
   };
 }

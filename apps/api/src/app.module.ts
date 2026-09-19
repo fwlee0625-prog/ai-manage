@@ -24,6 +24,7 @@ import { LiveFileWriterService } from './runtime/live-file-writer.service.js';
 import { RuntimeController } from './runtime/runtime.controller.js';
 import { RuntimeDetectorService } from './runtime/runtime-detector.service.js';
 import { RuntimeRepository } from './runtime/runtime.repository.js';
+import { RuntimeSyncService } from './runtime/runtime-sync.service.js';
 import { SnapshotService } from './runtime/snapshot.service.js';
 import { SwitchService } from './runtime/switch.service.js';
 import { TrashService } from './routes/trash.service.js';
@@ -50,6 +51,6 @@ import { TrashController } from './routes/trash.controller.js';
 
 @Module({
   controllers: [ToolsController, AccountsController, ConfigsController, ProvidersController, ProviderToolsController, RuntimeController, SkillsController, SessionsController, ProjectsController, TerminalsController, FilesController, TrashController, IndexingController, LogsController],
-  providers: [AdapterRegistry, AccountBindingsRepository, AccountResolverService, AccountsRepository, AccountsService, CodexOAuthService, CodexOAuthStoreService, CodexAdapter, ClaudeAdapter, PathGuard, IndexRepository, ManageRepository, IndexingService, TrashService, ToolsService, IndexRefreshService, ProjectsService, SessionsService, TerminalsService, TerminalsWebSocketServer, LogsService, ConfigsService, SkillsService, FilesService, CredentialStoreService, ProvidersRepository, ProvidersService, ProviderImportService, ProviderToolsService, RuntimeRepository, LiveFileWriterService, SnapshotService, RuntimeDetectorService, SwitchService],
+  providers: [AdapterRegistry, AccountBindingsRepository, AccountResolverService, AccountsRepository, AccountsService, CodexOAuthService, CodexOAuthStoreService, CodexAdapter, ClaudeAdapter, PathGuard, IndexRepository, ManageRepository, IndexingService, TrashService, ToolsService, IndexRefreshService, ProjectsService, SessionsService, TerminalsService, TerminalsWebSocketServer, LogsService, ConfigsService, SkillsService, FilesService, CredentialStoreService, ProvidersRepository, ProvidersService, ProviderImportService, ProviderToolsService, RuntimeRepository, LiveFileWriterService, SnapshotService, RuntimeDetectorService, RuntimeSyncService, SwitchService],
 })
 export class AppModule {}

@@ -37,3 +37,6 @@ export interface SwitchHistoryEntry {
   rolledBack: boolean;
   createdAt: string;
 }
+
+export interface RuntimeAdoptRequest { tool: AiTool; }
+export interface RuntimeRestoreRequest { tool: AiTool; }

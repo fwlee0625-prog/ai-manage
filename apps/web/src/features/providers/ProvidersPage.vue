@@ -17,13 +17,13 @@ const {
 const {
   providers, presets, runtime, loading, saving, switchingId, drawerVisible, draft, editing,
   testResult, models, modelLoading, load, openCreate, openEdit, applyPreset, save,
-  switchProvider, duplicate, remove, test, fetchModels, importLive,
+  switchProvider, duplicate, remove, test, fetchModels, adoptLive, restoreManaged, importLive,
 } = useProviders();
 </script>
 
 <template>
   <section class="providers-page">
-    <CurrentRuntimeCard :runtime="runtime" :loading="loading" @refresh="load" />
+    <CurrentRuntimeCard :runtime="runtime" :loading="loading" @refresh="load" @adopt="adoptLive" @restore="restoreManaged" />
     <section class="toolbar">
       <div>
         <h2>供应商</h2>
@@ -36,6 +36,18 @@ const {
       </div>
     </section>
 
+    <el-alert
+      v-if="!providers.length && runtime?.model"
+      title="发现现有配置"
+      :description="`检测到当前 live 模型 ${runtime.model}，可以先导入为托管 Provider，不会修改 live 文件。`"
+      type="info"
+      show-icon
+      :closable="false"
+    >
+      <template #default>
+        <el-button size="small" type="primary" plain @click="importLive">导入现有配置</el-button>
+      </template>
+    </el-alert>
     <ProviderTestResult :result="testResult" />
     <ProviderGrid
       :providers="providers"
