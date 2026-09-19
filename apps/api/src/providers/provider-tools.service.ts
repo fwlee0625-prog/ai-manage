@@ -21,10 +21,20 @@ export class ProviderToolsService {
     try {
       const response = await this.fetchModels(provider, await this.credentialFor(provider));
       return response.ok
-        ? { ok: true, stage: 'connect', status: response.status, message: '连接与认证检查通过' }
-        : { ok: false, stage: 'connect', status: response.status, message: `上游返回 HTTP ${response.status}` };
+        ? { ok: true, healthStatus: 'healthy', stage: 'connect', status: response.status, message: '连接与认证检查通过' }
+        : {
+            ok: false,
+            healthStatus: response.status === 401 || response.status === 403
+              ? 'auth_error'
+              : response.status >= 500
+                ? 'unreachable'
+                : 'invalid_config',
+            stage: 'connect',
+            status: response.status,
+            message: `上游返回 HTTP ${response.status}`,
+          };
     } catch (error) {
-      return { ok: false, stage: 'connect', message: safeError(error) };
+      return { ok: false, healthStatus: error instanceof BadRequestException ? 'invalid_config' : 'unreachable', stage: 'connect', message: safeError(error) };
     }
   }
 

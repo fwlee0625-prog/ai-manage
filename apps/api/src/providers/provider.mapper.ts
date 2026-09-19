@@ -4,7 +4,7 @@ export interface ProviderRow {
   id: string; tool: AiProviderProfile['tool']; name: string; provider_type: string;
   endpoint?: string | null; api_protocol?: string | null; default_model?: string | null;
   reasoning_effort?: string | null; auth_mode: ProviderAuthMode; account_id?: string | null;
-  credential_id?: string | null; metadata_json: string; created_at: string; updated_at: string;
+  credential_id?: string | null; sort_index?: number | null; metadata_json: string; created_at: string; updated_at: string;
 }
 
 /** Maps a managed-state row to a public provider profile. */
@@ -19,6 +19,6 @@ export function providerFromRow(row: ProviderRow): AiProviderProfile {
     endpoint: row.endpoint || undefined, apiProtocol: row.api_protocol || undefined,
     defaultModel: row.default_model || undefined, reasoningEffort: row.reasoning_effort || undefined,
     authMode: row.auth_mode, accountId: row.account_id || undefined, credentialId: row.credential_id || undefined,
-    metadata, createdAt: row.created_at, updatedAt: row.updated_at,
+    sortIndex: Number(row.sort_index ?? 0), metadata, createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }

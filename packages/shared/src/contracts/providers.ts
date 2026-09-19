@@ -2,6 +2,7 @@ import type { AiTool } from './common.js';
 import type { ProviderCredentialSummary } from './credentials.js';
 
 export type ProviderAuthMode = 'native_login' | 'managed_account' | 'api_key' | 'none';
+export type ProviderHealthStatus = 'unknown' | 'healthy' | 'auth_error' | 'unreachable' | 'invalid_config';
 
 export interface AiProviderProfile {
   id: string;
@@ -16,6 +17,7 @@ export interface AiProviderProfile {
   accountId?: string;
   credentialId?: string;
   credential?: ProviderCredentialSummary;
+  sortIndex?: number;
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -69,9 +71,15 @@ export interface ImportProvidersResponse { imported: AiProviderProfile[]; skippe
 
 export interface ProviderTestResponse {
   ok: boolean;
+  healthStatus: ProviderHealthStatus;
   stage: 'validate' | 'connect';
   status?: number;
   message: string;
+}
+
+export interface ReorderProvidersRequest {
+  tool: AiTool;
+  providerIds: string[];
 }
 
 export interface ProviderModelsResponse {

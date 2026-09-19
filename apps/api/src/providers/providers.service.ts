@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { AiProviderProfile, AiTool, CreateProviderRequest, ProviderPreset, UpdateProviderRequest } from '@ai-manage/shared';
+import type { AiProviderProfile, AiTool, CreateProviderRequest, ProviderPreset, ReorderProvidersRequest, UpdateProviderRequest } from '@ai-manage/shared';
 import { randomUUID } from 'node:crypto';
 import { AccountsRepository } from '../accounts/accounts.repository.js';
 import { CredentialStoreService } from '../credentials/credential-store.service.js';
@@ -48,7 +48,7 @@ export class ProvidersService {
       endpoint: clean(body.endpoint ?? preset?.endpoint), apiProtocol: clean(body.apiProtocol ?? preset?.apiProtocol),
       defaultModel: clean(body.defaultModel ?? preset?.defaultModel), reasoningEffort: clean(body.reasoningEffort),
       authMode: body.authMode || preset?.authMode || 'none', accountId: clean(body.accountId), credentialId: clean(credentialId),
-      metadata, createdAt: now, updatedAt: now,
+      sortIndex: (await this.repository.list(body.tool)).length, metadata, createdAt: now, updatedAt: now,
     };
     await this.validate(provider);
     await this.repository.save(provider);
@@ -80,6 +80,21 @@ export class ProvidersService {
     await this.validate(provider);
     await this.repository.save(provider);
     return this.withCredential(provider);
+  }
+
+  /** Reorders every Provider for one tool using stable local ids. */
+  async reorder(body: ReorderProvidersRequest): Promise<AiProviderProfile[]> {
+    const current = await this.repository.list(body.tool);
+    const expected = new Set(current.map(item => item.id));
+    const requested = new Set(body.providerIds);
+    if (body.providerIds.length !== current.length || requested.size !== current.length) {
+      throw new BadRequestException('providerIds must contain every Provider exactly once');
+    }
+    for (const id of requested) {
+      if (!expected.has(id)) throw new BadRequestException('providerIds contains a Provider from another tool or an unknown id');
+    }
+    await this.repository.reorder(body.providerIds);
+    return this.list(body.tool);
   }
 
   /** Deletes a provider and its owned API-key credential. */

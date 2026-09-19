@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import type { AiTool, CreateProviderRequest, ImportProvidersRequest, UpdateProviderRequest } from '@ai-manage/shared';
+import type { AiTool, CreateProviderRequest, ImportProvidersRequest, ReorderProvidersRequest, UpdateProviderRequest } from '@ai-manage/shared';
 import { ProviderImportService } from './provider-import.service.js';
 import { ProvidersService } from './providers.service.js';
 import { ProviderToolsService } from './provider-tools.service.js';
@@ -16,6 +16,9 @@ export class ProvidersController {
 
   /** Imports live provider configuration into managed state. */
   @Post('import-live') importLive(@Body() body: ImportProvidersRequest) { return this.importer.importLive(body.tool); }
+
+  /** Reorders Providers for one tool. */
+  @Patch('reorder') reorder(@Body() body: ReorderProvidersRequest) { return this.providers.reorder(body); }
 
   /** Creates a managed provider. */
   @Post() create(@Body() body: CreateProviderRequest) { return this.providers.create(body); }

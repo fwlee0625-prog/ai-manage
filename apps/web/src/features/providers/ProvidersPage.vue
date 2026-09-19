@@ -16,8 +16,8 @@ const {
 } = useAccounts();
 const {
   providers, presets, runtime, loading, saving, switchingId, drawerVisible, draft, editing,
-  testResult, models, modelLoading, load, openCreate, openEdit, applyPreset, save,
-  switchProvider, duplicate, remove, test, fetchModels, adoptLive, restoreManaged, importLive,
+  testResult, models, modelLoading, healthById, load, openCreate, openEdit, applyPreset, save,
+  switchProvider, duplicate, remove, reorder, test, fetchModels, adoptLive, restoreManaged, importLive,
 } = useProviders();
 </script>
 
@@ -53,11 +53,13 @@ const {
       :providers="providers"
       :active-id="runtime?.managedProviderId"
       :switching-id="switchingId"
+      :health-by-id="healthById"
       @switch="switchProvider"
       @edit="openEdit"
       @duplicate="duplicate"
       @test="test"
       @remove="remove"
+      @reorder="reorder"
     />
 
     <ProviderDrawer

@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import type { AiProviderProfile, ProviderPreset, ProviderTestResponse, RuntimeSummary } from '@ai-manage/shared';
+import type { AiProviderProfile, ProviderHealthStatus, ProviderPreset, ProviderTestResponse, RuntimeSummary } from '@ai-manage/shared';
 import { api } from '../../api';
 import { selectedTool } from '../../state/app-state';
 import { emptyProviderDraft, providerToDraft, type ProviderDraft } from './provider-view-model';
@@ -18,6 +18,7 @@ export function useProviders() {
   const testResult = ref<ProviderTestResponse>();
   const models = ref<string[]>([]);
   const modelLoading = ref(false);
+  const healthById = ref<Record<string, ProviderHealthStatus>>({});
 
   /** Reloads runtime, provider cards and presets for the selected tool. */
   async function load() {
@@ -125,9 +126,20 @@ export function useProviders() {
     await load();
   }
 
+  /** Persists a user-selected Provider order for the current tool. */
+  async function reorder(providerIds: string[]) {
+    try {
+      providers.value = await api.reorderProviders({ tool: selectedTool.value, providerIds });
+    } catch (error) {
+      ElMessage.error(error instanceof Error ? error.message : String(error));
+      await load();
+    }
+  }
+
   /** Tests one saved provider and stores a structured result. */
   async function test(provider: AiProviderProfile) {
     testResult.value = await api.testProvider(provider.id);
+    healthById.value = { ...healthById.value, [provider.id]: testResult.value.healthStatus };
     if (testResult.value.ok) ElMessage.success(testResult.value.message);
     else ElMessage.warning(testResult.value.message);
   }
@@ -184,7 +196,7 @@ export function useProviders() {
 
   return {
     providers, presets, runtime, loading, saving, switchingId, drawerVisible, draft, editing,
-    testResult, models, modelLoading, load, openCreate, openEdit, applyPreset, save,
-    switchProvider, duplicate, remove, test, fetchModels, adoptLive, restoreManaged, importLive,
+    testResult, models, modelLoading, healthById, load, openCreate, openEdit, applyPreset, save,
+    switchProvider, duplicate, remove, reorder, test, fetchModels, adoptLive, restoreManaged, importLive,
   };
 }

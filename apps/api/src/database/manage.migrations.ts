@@ -84,5 +84,14 @@ export const MANAGE_MIGRATIONS: DatabaseMigration[] = [{
     CREATE UNIQUE INDEX IF NOT EXISTS idx_account_provider_bindings_unique
       ON account_provider_bindings(provider_id, account_id, purpose);
   `,
+},
+{
+  version: 4,
+  name: 'add-provider-sort-index',
+  sql: `
+    ALTER TABLE providers ADD COLUMN sort_index INTEGER NOT NULL DEFAULT 0;
+    CREATE INDEX IF NOT EXISTS idx_providers_tool_sort
+      ON providers(tool, sort_index ASC, updated_at DESC);
+  `,
 }
 ];
