@@ -35,12 +35,19 @@ export class ProvidersService {
     let credentialId = body.credentialId;
     if (body.apiKey?.trim()) credentialId = (await this.credentials.createApiKey(body.apiKey)).id;
     const now = new Date().toISOString();
+    const id = randomUUID();
+    const metadata = { ...(preset?.metadata || {}), ...(body.metadata || {}) };
+    if (typeof metadata.liveKey !== 'string' && typeof metadata.importSourceKey !== 'string') {
+      metadata.liveKey = providerType === 'openai' || providerType === 'anthropic'
+        ? providerType
+        : `${providerType.replace(/[^A-Za-z0-9_-]/g, '-')}-${id.slice(0, 8)}`;
+    }
     const provider: AiProviderProfile = {
-      id: randomUUID(), tool: body.tool, name, providerType,
+      id, tool: body.tool, name, providerType,
       endpoint: clean(body.endpoint ?? preset?.endpoint), apiProtocol: clean(body.apiProtocol ?? preset?.apiProtocol),
       defaultModel: clean(body.defaultModel ?? preset?.defaultModel), reasoningEffort: clean(body.reasoningEffort),
       authMode: body.authMode || preset?.authMode || 'none', accountId: clean(body.accountId), credentialId: clean(credentialId),
-      metadata: { ...(preset?.metadata || {}), ...(body.metadata || {}) }, createdAt: now, updatedAt: now,
+      metadata, createdAt: now, updatedAt: now,
     };
     this.validate(provider);
     await this.repository.save(provider);

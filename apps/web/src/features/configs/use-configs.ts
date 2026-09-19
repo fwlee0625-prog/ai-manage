@@ -618,17 +618,27 @@ export function useConfigs() {
    * Activates a provider by saving its key to the root model_provider field.
    */
   async function activateModelProvider(key: string) {
-    if (key === activeModelProviderKey.value) return;
-    const providers = modelProviderRecordsForTool(draftRecord.value, selectedConfig.value?.tool);
-    if (!isRecord(providers[key])) {
-      ElMessage.error('供应商配置不存在');
-      return;
+    const tool = selectedConfig.value?.tool;
+    if (!tool || key === activeModelProviderKey.value) return;
+    savingSection.value = sectionId(MODEL_PROVIDER_KEY, key);
+    try {
+      let managed = await api.providers(tool);
+      let provider = managed.find(item => item.metadata.importSourceKey === key || item.metadata.liveKey === key || item.providerType === key);
+      if (!provider) {
+        await api.importProviders({ tool });
+        managed = await api.providers(tool);
+        provider = managed.find(item => item.metadata.importSourceKey === key || item.metadata.liveKey === key || item.providerType === key);
+      }
+      if (!provider) throw new Error('无法将当前供应商映射到托管 Provider');
+      const result = await api.switchProvider({ tool, providerId: provider.id });
+      if (!result.success) throw new Error(`切换失败：${result.stage || 'unknown'}，回滚：${result.rolledBack ? '成功' : '未完成'}`);
+      await reloadSelected();
+      ElMessage.success('模型供应商已切换');
+    } catch (error) {
+      ElMessage.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      savingSection.value = '';
     }
-    const saved = await saveSection(sectionId(MODEL_PROVIDER_KEY, key), () => ({
-      mode: 'parsed' as const,
-      parsed: modelWithActiveModelProvider(key),
-    }));
-    if (saved) await replaceAuthOpenAiApiKey(providers[key] as Record<string, unknown>);
   }
 
   /**

@@ -25,3 +25,15 @@ export interface SwitchProviderResponse {
   warnings?: string[];
   runtime?: RuntimeSummary;
 }
+
+export interface SwitchHistoryEntry {
+  id: string;
+  tool: AiTool;
+  fromProviderId?: string;
+  toProviderId?: string;
+  status: 'success' | 'failed';
+  failedStage?: string;
+  error?: string;
+  rolledBack: boolean;
+  createdAt: string;
+}

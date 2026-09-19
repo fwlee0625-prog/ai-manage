@@ -5,13 +5,13 @@ import { DATA_DIR, HOME_DIR } from '../utils.js';
 
 @Injectable()
 export class PathGuard {
-  readonly codexRoot = resolve(HOME_DIR, '.codex');
-  readonly claudeRoot = resolve(HOME_DIR, '.claude');
-  readonly claudeGlobalConfigPath = resolve(HOME_DIR, '.claude.json');
-  readonly agentsRoot = resolve(HOME_DIR, '.agents');
-  readonly dataRoot = DATA_DIR;
-  readonly codexAuthPath = resolve(this.codexRoot, 'auth.json');
-  readonly writableConfigFiles = new Set([
+  codexRoot = resolve(HOME_DIR, '.codex');
+  claudeRoot = resolve(HOME_DIR, '.claude');
+  claudeGlobalConfigPath = resolve(HOME_DIR, '.claude.json');
+  agentsRoot = resolve(HOME_DIR, '.agents');
+  dataRoot = DATA_DIR;
+  codexAuthPath = resolve(this.codexRoot, 'auth.json');
+  writableConfigFiles = new Set([
     resolve(this.codexRoot, 'config.toml'),
     resolve(this.codexRoot, 'AGENTS.md'),
     resolve(this.claudeRoot, 'settings.json'),
@@ -19,6 +19,24 @@ export class PathGuard {
     resolve(this.claudeRoot, 'CLAUDE.md'),
     this.claudeGlobalConfigPath,
   ]);
+
+  /** Creates an isolated path guard for integration tests without touching the real user home. */
+  static forRoots(codexRoot: string, claudeRoot: string): PathGuard {
+    const guard = new PathGuard();
+    guard.codexRoot = resolve(codexRoot);
+    guard.claudeRoot = resolve(claudeRoot);
+    guard.claudeGlobalConfigPath = resolve(claudeRoot, '..', '.claude.json');
+    guard.codexAuthPath = resolve(guard.codexRoot, 'auth.json');
+    guard.writableConfigFiles = new Set([
+      resolve(guard.codexRoot, 'config.toml'),
+      resolve(guard.codexRoot, 'AGENTS.md'),
+      resolve(guard.claudeRoot, 'settings.json'),
+      resolve(guard.claudeRoot, 'settings.local.json'),
+      resolve(guard.claudeRoot, 'CLAUDE.md'),
+      guard.claudeGlobalConfigPath,
+    ]);
+    return guard;
+  }
 
   allowedRoots(): string[] {
     return [this.codexRoot, this.claudeRoot, this.agentsRoot, this.dataRoot];

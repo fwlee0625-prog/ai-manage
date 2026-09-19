@@ -11,6 +11,12 @@ import { ProviderImportService } from './providers/provider-import.service.js';
 import { ProvidersController } from './providers/providers.controller.js';
 import { ProvidersRepository } from './providers/providers.repository.js';
 import { ProvidersService } from './providers/providers.service.js';
+import { LiveFileWriterService } from './runtime/live-file-writer.service.js';
+import { RuntimeController } from './runtime/runtime.controller.js';
+import { RuntimeDetectorService } from './runtime/runtime-detector.service.js';
+import { RuntimeRepository } from './runtime/runtime.repository.js';
+import { SnapshotService } from './runtime/snapshot.service.js';
+import { SwitchService } from './runtime/switch.service.js';
 import { TrashService } from './routes/trash.service.js';
 import { ConfigsController } from './routes/configs.controller.js';
 import { ConfigsService } from './routes/configs.service.js';
@@ -34,7 +40,7 @@ import { ToolsService } from './routes/tools.service.js';
 import { TrashController } from './routes/trash.controller.js';
 
 @Module({
-  controllers: [ToolsController, ConfigsController, ProvidersController, SkillsController, SessionsController, ProjectsController, TerminalsController, FilesController, TrashController, IndexingController, LogsController],
-  providers: [AdapterRegistry, CodexAdapter, ClaudeAdapter, PathGuard, IndexRepository, ManageRepository, IndexingService, TrashService, ToolsService, IndexRefreshService, ProjectsService, SessionsService, TerminalsService, TerminalsWebSocketServer, LogsService, ConfigsService, SkillsService, FilesService, CredentialStoreService, ProvidersRepository, ProvidersService, ProviderImportService],
+  controllers: [ToolsController, ConfigsController, ProvidersController, RuntimeController, SkillsController, SessionsController, ProjectsController, TerminalsController, FilesController, TrashController, IndexingController, LogsController],
+  providers: [AdapterRegistry, CodexAdapter, ClaudeAdapter, PathGuard, IndexRepository, ManageRepository, IndexingService, TrashService, ToolsService, IndexRefreshService, ProjectsService, SessionsService, TerminalsService, TerminalsWebSocketServer, LogsService, ConfigsService, SkillsService, FilesService, CredentialStoreService, ProvidersRepository, ProvidersService, ProviderImportService, RuntimeRepository, LiveFileWriterService, SnapshotService, RuntimeDetectorService, SwitchService],
 })
 export class AppModule {}
