@@ -9,18 +9,39 @@ export const refreshRevision = shallowRef(0);
 export const lastRefreshAt = shallowRef('');
 
 /**
+ * Loads the persisted last refresh time for the requested AI tool.
+ */
+export async function loadLastRefreshAt(tool: AiTool = selectedTool.value) {
+  try {
+    const indexStatus = await api.indexStatus(tool);
+    if (selectedTool.value !== tool) return;
+
+    const status = indexStatus.statuses.find(item => item.tool === tool);
+    lastRefreshAt.value = status?.lastIndexedAt ?? '';
+  } catch {
+    if (selectedTool.value === tool) {
+      lastRefreshAt.value = '';
+    }
+  }
+}
+
+/**
  * Refreshes the indexed data for the currently selected AI tool.
  */
 export async function refreshIndex() {
+  const tool = selectedTool.value;
   refreshing.value = true;
   try {
     const result = await runWithApiFeedback(
-      () => api.refresh(selectedTool.value),
+      () => api.refresh(tool),
       { success: '索引已刷新' },
     );
     if (result) {
       refreshRevision.value += 1;
-      lastRefreshAt.value = new Date().toISOString();
+      if (selectedTool.value === tool) {
+        const status = result.find(item => item.tool === tool);
+        lastRefreshAt.value = status?.lastIndexedAt ?? '';
+      }
     }
   } finally {
     refreshing.value = false;
