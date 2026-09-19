@@ -19,6 +19,7 @@ const selectedTool = defineModel<AiTool>("selectedTool", { required: true });
 const navItems: NavItem[] = [
   { index: "/overview", label: "总览" },
   { index: "/workspace", label: "对话" },
+  { index: "/providers", label: "模型与账号" },
   { index: "/configs", label: "配置管理" },
   { index: "/mcp-servers", label: "MCP 服务器" },
   { index: "/skills", label: "技能管理" },

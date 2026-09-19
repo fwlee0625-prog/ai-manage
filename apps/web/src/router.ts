@@ -28,6 +28,12 @@ const managedConsoleRoutes: RouteRecordRaw[] = [
     meta: { title: "对话", sidebarOpen: false, headerOpen: false },
   },
   {
+    path: "providers",
+    name: "providers",
+    component: () => import("./features/providers/ProvidersPage.vue"),
+    meta: { title: "模型与账号", sidebarOpen: true, headerOpen: true },
+  },
+  {
     path: "configs",
     name: "configs",
     component: () => import("./features/configs/ConfigsPage.vue"),

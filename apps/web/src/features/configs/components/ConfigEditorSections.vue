@@ -10,7 +10,6 @@ import type {
   ModelProviderDrawerMode,
   ModelProviderForm,
 } from "../use-configs";
-import ModelProviderManager from "./ModelProviderManager.vue";
 
 const draftRaw = defineModel<string>("draftRaw", { required: true });
 const modelProviderDrawerVisible = defineModel<boolean>(
@@ -247,21 +246,15 @@ const emit = defineEmits<{
         />
       </section>
 
-      <ModelProviderManager
-        v-if="isModelRootSection"
-        v-model:drawer-visible="modelProviderDrawerVisible"
-        v-model:draft-key="modelProviderDraftKey"
-        v-model:draft-form="modelProviderDraftForm"
-        :providers="modelProviderCards"
-        :active-key="activeModelProviderKey"
-        :drawer-mode="modelProviderDrawerMode"
-        :saving-section="savingSection"
-        @create="emit('createModelProvider')"
-        @edit="emit('editModelProvider', $event)"
-        @activate="emit('activateModelProvider', $event)"
-        @save="emit('saveModelProvider')"
-        @close="emit('closeModelProvider')"
-      />
+      <section v-if="isModelRootSection" class="config-section-card">
+        <div class="section-heading">
+          <div>
+            <h3>模型与账号已迁移</h3>
+            <p>Provider、API Key、账号绑定与运行环境切换由独立模块统一管理。</p>
+          </div>
+          <router-link to="/providers"><el-button type="primary" plain>前往模型与账号</el-button></router-link>
+        </div>
+      </section>
     </template>
 
     <template

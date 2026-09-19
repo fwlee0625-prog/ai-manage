@@ -66,3 +66,18 @@ export interface UpdateProviderRequest {
 
 export interface ImportProvidersRequest { tool: AiTool; }
 export interface ImportProvidersResponse { imported: AiProviderProfile[]; skipped: number; }
+
+export interface ProviderTestResponse {
+  ok: boolean;
+  stage: 'validate' | 'connect';
+  status?: number;
+  message: string;
+}
+
+export interface ProviderModelsResponse {
+  models: string[];
+}
+
+export interface ProviderDraftModelsRequest extends CreateProviderRequest {
+  tool: AiTool;
+}
