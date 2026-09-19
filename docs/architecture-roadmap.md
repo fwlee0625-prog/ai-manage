@@ -111,3 +111,37 @@
 - 已将 `packages/shared` 拆成 `contracts/*` 和 `formatters/*`。
 - 根出口 `@ai-manage/shared` 保持兼容，现有调用无需迁移。
 - 后续新增共享类型必须放到对应领域文件，不再堆到根 `index.ts`。
+
+
+## 模型与账号领域（2026-09）
+
+模型切换已经从“配置管理中的一组表单”迁移为独立领域：
+
+- `manage.sqlite` 保存 Provider、managed account、active profile 与 switch history；live 配置不再作为 Provider SSOT。
+- `providers` 负责 Provider/Preset/Credential 生命周期，Secret 不进入列表 DTO。
+- `accounts` 负责 Codex ChatGPT managed OAuth 多账号与独立 OAuth Secret Store。
+- `runtime` 负责 tool 级锁、snapshot、projection、atomic write、verify、rollback 和 active profile commit。
+- RuntimeDetector 对比 managed state 与实际 live，区分 `synced`、`externally_modified`、`unmanaged`、`auth_invalid`、`reauth_required`。
+- 模型与账号页面是普通用户的主入口；配置管理只保留高级配置编辑和跳转入口。
+- live 写入仍遵守 PathGuard 白名单、高风险 auth 独立入口、snapshot/backup、写后验证和失败恢复。
+- 外部修改不会被后台静默覆盖；用户可以选择采用当前 live，或通过 SwitchService 恢复 AI Manage 托管状态。
+
+### 写权限边界
+
+允许修改的 live 文件仍然是明确白名单，而不是整个工具目录。Provider 切换涉及的 Codex `config.toml` / `auth.json` 与 Claude `settings.json` 必须经过 Runtime 写入链路；其它工具数据继续遵守原有只读或专用写入口。
+
+### 当前模型切换职责
+
+```text
+Managed Provider / Account
+          ↓
+     SwitchService
+          ↓
+      Projection
+          ↓
+ Snapshot → Atomic Writer → Verify
+          ↓                 ↓
+       Rollback        active_profiles
+```
+
+旧的 Configs Provider CRUD 与公开 Codex auth API Key patch 路径已经退出主流程。

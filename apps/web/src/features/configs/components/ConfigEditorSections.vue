@@ -6,24 +6,9 @@ import type {
   ConfigGroupItemEntry,
   ConfigMenuItem,
   FieldMeta,
-  ModelProviderCard,
-  ModelProviderDrawerMode,
-  ModelProviderForm,
 } from "../use-configs";
 
 const draftRaw = defineModel<string>("draftRaw", { required: true });
-const modelProviderDrawerVisible = defineModel<boolean>(
-  "modelProviderDrawerVisible",
-  { required: true },
-);
-const modelProviderDraftKey = defineModel<string>("modelProviderDraftKey", {
-  required: true,
-});
-const modelProviderDraftForm = defineModel<ModelProviderForm>(
-  "modelProviderDraftForm",
-  { required: true },
-);
-
 const props = defineProps<{
   selectedConfig: ConfigFileDetail;
   selectedMenuItem: ConfigMenuItem;
@@ -33,9 +18,6 @@ const props = defineProps<{
   rootDirty: boolean;
   rootFields: Record<string, unknown>;
   draftRecord: Record<string, unknown>;
-  activeModelProviderKey: string;
-  modelProviderCards: ModelProviderCard[];
-  modelProviderDrawerMode: ModelProviderDrawerMode;
   fieldPath: (section: string) => string[];
   configFieldMeta: (path: string[], key: string) => FieldMeta;
   shouldSplitGroup: (key: string) => boolean;
@@ -175,11 +157,6 @@ const emit = defineEmits<{
   updateGroupItem: [groupKey: string, itemKey: string, value: unknown];
   saveGroup: [key: string];
   updateGroup: [key: string, value: unknown];
-  createModelProvider: [];
-  editModelProvider: [key: string];
-  activateModelProvider: [key: string];
-  saveModelProvider: [];
-  closeModelProvider: [];
 }>();
 </script>
 

@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
-import type { AiTool, ReplaceCodexOpenAiApiKeyRequest, SaveConfigFileRequest } from '@ai-manage/shared';
+import type { AiTool, SaveConfigFileRequest } from '@ai-manage/shared';
 import { ConfigsService } from './configs.service.js';
 
 @Controller('config-files')
@@ -16,18 +16,6 @@ export class ConfigsController {
   @Get('editable-details')
   editableConfigDetails(@Query('tool') tool: AiTool) {
     return this.service.editableConfigDetails(tool);
-  }
-
-  /** Reads OPENAI_API_KEY from Codex auth.json. */
-  @Get('codex-auth/openai-api-key')
-  codexOpenAiApiKey() {
-    return this.service.codexOpenAiApiKey();
-  }
-
-  /** Replaces OPENAI_API_KEY in Codex auth.json. */
-  @Patch('codex-auth/openai-api-key')
-  replaceCodexOpenAiApiKey(@Body() body: ReplaceCodexOpenAiApiKeyRequest) {
-    return this.service.replaceCodexOpenAiApiKey(body);
   }
 
   /** Reads a single config file by stable id. */

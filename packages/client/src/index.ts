@@ -13,7 +13,6 @@ import type {
   ProviderDraftModelsRequest,
   UpdateProviderRequest,
   ClearTrashSessionsResponse,
-  CodexOpenAiApiKeyResponse,
   ConfigFileDetail,
   ConfigFileSummary,
   DeleteSessionResponse,
@@ -22,8 +21,6 @@ import type {
   LogEntry,
   PaginatedResult,
   ProjectSummary,
-  ReplaceCodexOpenAiApiKeyRequest,
-  ReplaceCodexOpenAiApiKeyResponse,
   RestoreTrashSessionResponse,
   RuntimeSummary,
   RuntimeAdoptRequest,
@@ -76,11 +73,6 @@ export function createAiManageClient(options: AiManageClientOptions = {}) {
     editableConfigDetails: (tool: AiTool) => request<ConfigFileDetail[]>(fetchImpl, baseUrl, `/api/config-files/editable-details?tool=${tool}`),
     configFile: (id: string) => request<ConfigFileDetail>(fetchImpl, baseUrl, `/api/config-files/${id}`),
     saveConfigFile: (id: string, body: SaveConfigFileRequest) => request<SaveConfigFileResponse>(fetchImpl, baseUrl, `/api/config-files/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
-    codexOpenAiApiKey: () => request<CodexOpenAiApiKeyResponse>(fetchImpl, baseUrl, '/api/config-files/codex-auth/openai-api-key'),
-    replaceCodexOpenAiApiKey: (body: ReplaceCodexOpenAiApiKeyRequest) => request<ReplaceCodexOpenAiApiKeyResponse>(fetchImpl, baseUrl, '/api/config-files/codex-auth/openai-api-key', {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),

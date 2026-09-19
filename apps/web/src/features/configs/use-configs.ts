@@ -28,30 +28,6 @@ export interface ConfigGroupItemEntry {
   value: unknown;
 }
 
-export interface ModelProviderCard {
-  key: string;
-  name: string;
-  value: Record<string, unknown>;
-  active: boolean;
-  baseUrl: string;
-  wireApi: string;
-  model: string;
-  reasoningEffort: string;
-  openAiApiKeyConfigured: boolean;
-}
-
-export interface ModelProviderForm {
-  name: string;
-  base_url: string;
-  wire_api: string;
-  model: string;
-  model_reasoning_effort: string;
-  openai_api_key: string;
-  extra: Record<string, unknown>;
-}
-
-export type ModelProviderDrawerMode = 'create' | 'edit';
-
 const markdownInputStyle = { minHeight: '560px', height: '560px' };
 const MODEL_PROVIDER_KEY = 'model_provider';
 const MODEL_PROVIDERS_KEY = 'model_providers';
@@ -190,11 +166,6 @@ export function useConfigs() {
   const draftRaw = ref('');
   const savingSection = ref('');
   const loadingDetail = ref(false);
-  const modelProviderDrawerVisible = ref(false);
-  const modelProviderDrawerMode = ref<ModelProviderDrawerMode>('edit');
-  const modelProviderDraftKey = ref('');
-  const modelProviderDraftOriginalKey = ref('');
-  const modelProviderDraftForm = ref<ModelProviderForm>(emptyModelProviderForm());
 
   const menuItems = computed(() => configDetails.value.flatMap(detail => menuItemsForDetail(detail)));
   const selectedMenuItem = computed(() => menuItems.value.find(item => item.id === selectedMenuId.value));
@@ -216,32 +187,10 @@ export function useConfigs() {
 
   const markdownDirty = computed(() => !!selectedConfig.value && draftRaw.value !== selectedConfig.value.raw);
   const rootDirty = computed(() => stableString(rootFields.value) !== stableString(originalRootFields.value));
-  const modelProvidersDirty = computed(() => activeRootKind.value === 'model' && (
-    isGroupDirty(MODEL_PROVIDERS_KEY) || (selectedConfig.value?.tool === 'claude' && isGroupDirty(ENV_KEY))
-  ));
-  const activeModelProviderKey = computed(() => activeModelProviderKeyForRecord(draftRecord.value, selectedConfig.value?.tool));
-  const modelProviderCards = computed<ModelProviderCard[]>(() => {
-    const providers = modelProviderRecordsForTool(draftRecord.value, selectedConfig.value?.tool);
-    return Object.entries(providers).map(([key, value]) => {
-      const record = isRecord(value) ? value : {};
-      const effectiveRecord = effectiveModelProviderRecord(key, record, draftRecord.value);
-      return {
-        key,
-        name: providerDisplayName(key, effectiveRecord),
-        value: effectiveRecord,
-        active: key === activeModelProviderKey.value,
-        baseUrl: providerBaseUrl(effectiveRecord),
-        wireApi: formatScalar(effectiveRecord.wire_api || effectiveRecord.wireApi || effectiveRecord.type),
-        model: providerModel(effectiveRecord),
-        reasoningEffort: providerReasoningEffort(effectiveRecord),
-        openAiApiKeyConfigured: !!providerOpenAiApiKey(effectiveRecord),
-      };
-    });
-  });
   const formDirty = computed(() => {
     if (!selectedConfig.value) return false;
     if (selectedMenuItem.value?.section === 'markdown') return markdownDirty.value;
-    if (selectedMenuItem.value?.section === 'root') return rootDirty.value || modelProvidersDirty.value;
+    if (selectedMenuItem.value?.section === 'root') return rootDirty.value;
     return selectedMenuItem.value?.key ? isGroupDirty(selectedMenuItem.value.key) : false;
   });
   const isDirty = computed(() => formDirty.value);
@@ -329,7 +278,6 @@ export function useConfigs() {
     if (!selectedConfig.value) return;
     draftRaw.value = selectedConfig.value.raw;
     draftModel.value = clone(selectedConfig.value.formModel ?? selectedConfig.value.parsed ?? {});
-    closeModelProviderDrawer();
   }
 
   /**
@@ -446,44 +394,7 @@ export function useConfigs() {
     };
   }
 
-  /**
-   * Builds a parsed config model with one provider object saved and optionally activated.
-   */
-  function modelWithModelProvider(
-    key: string,
-    value: Record<string, unknown>,
-    originalKey?: string,
-  ) {
-    const baseModel = clone(selectedConfig.value?.formModel ?? {});
-    const base = isRecord(baseModel) ? baseModel : {};
-    const providers = { ...modelProvidersRecord(base) };
-    if (originalKey && originalKey !== key) delete providers[originalKey];
-    providers[key] = clone(value);
-    const next = {
-      ...base,
-      [MODEL_PROVIDERS_KEY]: providers,
-    };
-    return key === activeModelProviderKeyForRecord(base, selectedConfig.value?.tool)
-      ? { ...next, ...activeProviderConfigFields(key, value, base, selectedConfig.value?.tool) }
-      : next;
-  }
-
-  /**
-   * Builds a parsed config model with only the active provider key replaced.
-   */
-  function modelWithActiveModelProvider(key: string) {
-    const baseModel = clone(selectedConfig.value?.formModel ?? {});
-    const base = isRecord(baseModel) ? baseModel : {};
-    const provider = modelProviderRecordsForTool(base, selectedConfig.value?.tool)[key];
-    return {
-      ...base,
-      ...activeProviderConfigFields(key, isRecord(provider) ? provider : {}, base, selectedConfig.value?.tool),
-    };
-  }
-
-  /**
-   * Checks whether a top-level object group differs from the loaded config.
-   */
+  /** Checks whether a top-level object group differs from the loaded config. */
   function isGroupDirty(key: string) {
     return stableString(draftRecord.value[key]) !== stableString(originalRecord.value[key]);
   }
@@ -543,136 +454,6 @@ export function useConfigs() {
       mode: 'parsed' as const,
       parsed: modelWithGroupItemValue(groupKey, itemKey, nextValue),
     }));
-  }
-
-  /**
-   * Opens the model provider drawer with an empty provider JSON object.
-   */
-  function openModelProviderCreate() {
-    modelProviderDrawerMode.value = 'create';
-    modelProviderDraftKey.value = '';
-    modelProviderDraftOriginalKey.value = '';
-    modelProviderDraftForm.value = emptyModelProviderForm();
-    modelProviderDrawerVisible.value = true;
-  }
-
-  /**
-   * Opens the model provider drawer for editing an existing provider.
-   */
-  async function openModelProviderEdit(key: string) {
-    const provider = modelProviderRecordsForTool(draftRecord.value, selectedConfig.value?.tool)[key];
-    if (!isRecord(provider)) {
-      ElMessage.error('供应商配置不存在');
-      return;
-    }
-    modelProviderDrawerMode.value = 'edit';
-    modelProviderDraftKey.value = key;
-    modelProviderDraftOriginalKey.value = key;
-    modelProviderDraftForm.value = modelProviderFormFromRecord(
-      effectiveModelProviderRecord(key, provider, draftRecord.value),
-    );
-    modelProviderDrawerVisible.value = true;
-    await fillCodexOpenAiApiKeyFromAuth(key);
-  }
-
-  /**
-   * Closes the model provider drawer without changing the loaded config draft.
-   */
-  function closeModelProviderDrawer() {
-    modelProviderDrawerVisible.value = false;
-  }
-
-  /**
-   * Saves the provider form into model_providers.
-   */
-  async function saveModelProviderDraft() {
-    const key = modelProviderDraftKey.value.trim();
-    if (!key) {
-      ElMessage.error('请填写供应商标识');
-      return;
-    }
-    const providers = modelProviderRecordsForTool(draftRecord.value, selectedConfig.value?.tool);
-    const originalKey = modelProviderDraftOriginalKey.value;
-    if (modelProviderDrawerMode.value === 'create' && providers[key] !== undefined) {
-      ElMessage.error('供应商标识已存在');
-      return;
-    }
-    if (modelProviderDrawerMode.value === 'edit' && key !== originalKey && providers[key] !== undefined) {
-      ElMessage.error('供应商标识已存在');
-      return;
-    }
-
-    const parsed = modelProviderRecordFromForm(modelProviderDraftForm.value);
-
-    const saved = await saveSection('model_provider:drawer', () => ({
-      mode: 'parsed' as const,
-      parsed: modelWithModelProvider(key, parsed, originalKey),
-    }));
-    if (saved) {
-      if (key === activeModelProviderKey.value) await replaceAuthOpenAiApiKey(parsed);
-      closeModelProviderDrawer();
-    }
-  }
-
-  /**
-   * Activates a provider by saving its key to the root model_provider field.
-   */
-  async function activateModelProvider(key: string) {
-    const tool = selectedConfig.value?.tool;
-    if (!tool || key === activeModelProviderKey.value) return;
-    savingSection.value = sectionId(MODEL_PROVIDER_KEY, key);
-    try {
-      let managed = await api.providers(tool);
-      let provider = managed.find(item => item.metadata.importSourceKey === key || item.metadata.liveKey === key || item.providerType === key);
-      if (!provider) {
-        await api.importProviders({ tool });
-        managed = await api.providers(tool);
-        provider = managed.find(item => item.metadata.importSourceKey === key || item.metadata.liveKey === key || item.providerType === key);
-      }
-      if (!provider) throw new Error('无法将当前供应商映射到托管 Provider');
-      const result = await api.switchProvider({ tool, providerId: provider.id });
-      if (!result.success) throw new Error(`切换失败：${result.stage || 'unknown'}，回滚：${result.rolledBack ? '成功' : '未完成'}`);
-      await reloadSelected();
-      ElMessage.success('模型供应商已切换');
-    } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : String(error));
-    } finally {
-      savingSection.value = '';
-    }
-  }
-
-  /**
-   * Replaces Codex auth.json OPENAI_API_KEY from the active provider, when configured.
-   */
-  async function replaceAuthOpenAiApiKey(provider: Record<string, unknown>) {
-    if (selectedConfig.value?.tool !== 'codex') return;
-    const openaiApiKey = providerOpenAiApiKey(provider);
-    if (!openaiApiKey) return;
-    try {
-      const response = await api.replaceCodexOpenAiApiKey({ openaiApiKey });
-      ElMessage.success(response.backupPath
-        ? `auth.json 已更新，备份：${response.backupPath}`
-        : 'auth.json 已更新');
-    } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : String(error));
-    }
-  }
-
-  /**
-   * Loads the current Codex auth.json OPENAI_API_KEY into the active provider edit form.
-   */
-  async function fillCodexOpenAiApiKeyFromAuth(key: string) {
-    if (selectedConfig.value?.tool !== 'codex') return;
-    try {
-      const response = await api.codexOpenAiApiKey();
-      if (!response.exists || !modelProviderDrawerVisible.value || modelProviderDraftOriginalKey.value !== key) return;
-      modelProviderDraftForm.value = {
-        ...modelProviderDraftForm.value,
-        openai_api_key: response.openaiApiKey,
-      };
-    } catch (error) {
-      ElMessage.error(`读取 auth.json 失败：${error instanceof Error ? error.message : String(error)}`);
-    }
   }
 
   /**
@@ -742,12 +523,6 @@ export function useConfigs() {
     rootDirty,
     rootFields,
     draftRecord,
-    activeModelProviderKey,
-    modelProviderCards,
-    modelProviderDrawerVisible,
-    modelProviderDrawerMode,
-    modelProviderDraftKey,
-    modelProviderDraftForm,
     selectMenu,
     resetDraft,
     reloadSelected,
@@ -771,11 +546,6 @@ export function useConfigs() {
     isGroupDirty,
     saveGroupSection,
     updateGroup,
-    openModelProviderCreate,
-    openModelProviderEdit,
-    closeModelProviderDrawer,
-    saveModelProviderDraft,
-    activateModelProvider,
   };
 }
 
@@ -938,233 +708,6 @@ function isRootFieldForKind(key: string, value: unknown, kind: RootMenuKind) {
 function modelProvidersRecord(record: Record<string, unknown>): Record<string, unknown> {
   const providers = record[MODEL_PROVIDERS_KEY];
   return isRecord(providers) ? providers : {};
-}
-
-/**
- * Resolves provider records for Codex native providers or Claude env-backed providers.
- */
-function modelProviderRecordsForTool(record: Record<string, unknown>, tool?: AiTool): Record<string, unknown> {
-  const providers = modelProvidersRecord(record);
-  if (Object.keys(providers).length || tool !== 'claude') return providers;
-  const env = isRecord(record[ENV_KEY]) ? record[ENV_KEY] : {};
-  return Object.keys(env).length ? { [CLAUDE_ENV_PROVIDER_KEY]: claudeProviderFromEnv(env) } : {};
-}
-
-/**
- * Resolves the active provider key for a parsed config record.
- */
-function activeModelProviderKeyForRecord(record: Record<string, unknown>, tool?: AiTool) {
-  const configured = formatScalar(record[MODEL_PROVIDER_KEY]);
-  if (configured) return configured;
-  if (tool !== 'claude') return '';
-  const providers = modelProvidersRecord(record);
-  const firstProviderKey = Object.keys(providers)[0];
-  if (firstProviderKey) return firstProviderKey;
-  return isRecord(record[ENV_KEY]) ? CLAUDE_ENV_PROVIDER_KEY : '';
-}
-
-/**
- * Converts Claude settings env variables into a provider-like record.
- */
-function claudeProviderFromEnv(env: Record<string, unknown>): Record<string, unknown> {
-  return {
-    name: '当前模型配置',
-    base_url: providerBaseUrl(env),
-    model: providerModel(env),
-    openai_api_key: providerOpenAiApiKey(env),
-    env: clone(env),
-  };
-}
-
-/**
- * Creates the default form state for a provider drawer.
- */
-function emptyModelProviderForm(): ModelProviderForm {
-  return {
-    name: '',
-    base_url: '',
-    wire_api: '',
-    model: '',
-    model_reasoning_effort: 'medium',
-    openai_api_key: '',
-    extra: {},
-  };
-}
-
-/**
- * Maps a provider record into editable form fields while preserving unknown keys.
- */
-function modelProviderFormFromRecord(record: Record<string, unknown>): ModelProviderForm {
-  const knownKeys = new Set([
-    'name',
-    'base_url',
-    'baseUrl',
-    'url',
-    'wire_api',
-    'wireApi',
-    MODEL_KEY,
-    MODEL_REASONING_EFFORT_KEY,
-    'openai_api_key',
-    'OPENAI_API_KEY',
-    'ANTHROPIC_API_KEY',
-    'ANTHROPIC_AUTH_TOKEN',
-    'ANTHROPIC_BASE_URL',
-    'OPENAI_BASE_URL',
-    'ANTHROPIC_MODEL',
-    'CLAUDE_MODEL',
-  ]);
-  return {
-    name: formatScalar(record.name),
-    base_url: providerBaseUrl(record),
-    wire_api: formatScalar(record.wire_api),
-    model: providerModel(record),
-    model_reasoning_effort: providerReasoningEffort(record) || 'medium',
-    openai_api_key: providerOpenAiApiKey(record),
-    extra: Object.fromEntries(Object.entries(record).filter(([key]) => !knownKeys.has(key))),
-  };
-}
-
-/**
- * Maps provider form fields back to the persisted provider object.
- */
-function modelProviderRecordFromForm(form: ModelProviderForm): Record<string, unknown> {
-  const record: Record<string, unknown> = { ...form.extra };
-  assignTrimmed(record, 'name', form.name);
-  assignTrimmed(record, 'base_url', form.base_url);
-  assignTrimmed(record, 'wire_api', form.wire_api);
-  assignTrimmed(record, MODEL_KEY, form.model);
-  assignTrimmed(record, MODEL_REASONING_EFFORT_KEY, form.model_reasoning_effort);
-  assignTrimmed(record, 'openai_api_key', form.openai_api_key);
-  return record;
-}
-
-/**
- * Applies root-level effective model config to the currently active provider view.
- */
-function effectiveModelProviderRecord(
-  key: string,
-  provider: Record<string, unknown>,
-  root: Record<string, unknown>,
-) {
-  if (key !== formatScalar(root[MODEL_PROVIDER_KEY])) return provider;
-  const next = { ...provider };
-  assignRootValue(next, root, MODEL_KEY);
-  assignRootValue(next, root, MODEL_REASONING_EFFORT_KEY);
-  return next;
-}
-
-/**
- * Builds the root model fields that should follow an activated provider.
- */
-function activeProviderRootFields(key: string, provider: Record<string, unknown>) {
-  const fields: Record<string, unknown> = { [MODEL_PROVIDER_KEY]: key };
-  const model = formatScalar(provider[MODEL_KEY]).trim();
-  const reasoningEffort = formatScalar(provider[MODEL_REASONING_EFFORT_KEY]).trim();
-  if (model) fields[MODEL_KEY] = model;
-  if (reasoningEffort) fields[MODEL_REASONING_EFFORT_KEY] = reasoningEffort;
-  return fields;
-}
-
-/**
- * Builds the config fields that should follow an activated provider for the selected tool.
- */
-function activeProviderConfigFields(
-  key: string,
-  provider: Record<string, unknown>,
-  base: Record<string, unknown>,
-  tool?: AiTool,
-) {
-  if (tool === 'claude') {
-    return {
-      [MODEL_PROVIDER_KEY]: key,
-      [ENV_KEY]: claudeEnvFromProvider(provider, isRecord(base[ENV_KEY]) ? base[ENV_KEY] : {}),
-    };
-  }
-  return activeProviderRootFields(key, provider);
-}
-
-/**
- * Converts a provider record into Claude environment variables while preserving unrelated env keys.
- */
-function claudeEnvFromProvider(provider: Record<string, unknown>, previousEnv: Record<string, unknown>) {
-  const env: Record<string, unknown> = { ...previousEnv };
-  const nestedEnv = isRecord(provider.env) ? provider.env : {};
-  for (const [key, value] of Object.entries(nestedEnv)) {
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') env[key] = String(value);
-  }
-  assignProviderEnv(env, 'ANTHROPIC_BASE_URL', providerBaseUrl(provider));
-  assignProviderEnv(env, 'ANTHROPIC_MODEL', providerModel(provider));
-  assignProviderEnv(env, 'ANTHROPIC_API_KEY', providerOpenAiApiKey(provider));
-  return env;
-}
-
-/**
- * Assigns a provider field to Claude env, removing empty mapped values.
- */
-function assignProviderEnv(env: Record<string, unknown>, key: string, value: string) {
-  const trimmed = value.trim();
-  if (trimmed) env[key] = trimmed;
-  else delete env[key];
-}
-
-/**
- * Resolves a readable supplier name from provider config.
- */
-function providerDisplayName(key: string, value: Record<string, unknown>) {
-  const name = value.name;
-  return typeof name === 'string' && name.trim() ? name : key;
-}
-
-/**
- * Reads the provider API key used to replace Codex auth.json OPENAI_API_KEY.
- */
-function providerOpenAiApiKey(value: Record<string, unknown>) {
-  const key = value.openai_api_key
-    ?? value.OPENAI_API_KEY
-    ?? value.ANTHROPIC_API_KEY
-    ?? value.ANTHROPIC_AUTH_TOKEN;
-  return typeof key === 'string' ? key.trim() : '';
-}
-
-/**
- * Reads a provider base URL from provider fields or Claude/OpenAI env aliases.
- */
-function providerBaseUrl(value: Record<string, unknown>) {
-  return formatScalar(value.base_url || value.baseUrl || value.url || value.ANTHROPIC_BASE_URL || value.OPENAI_BASE_URL);
-}
-
-/**
- * Reads a provider model from provider fields or Claude env aliases.
- */
-function providerModel(value: Record<string, unknown>) {
-  return formatScalar(value[MODEL_KEY] || value.ANTHROPIC_MODEL || value.CLAUDE_MODEL);
-}
-
-/**
- * Reads provider reasoning effort from known provider fields.
- */
-function providerReasoningEffort(value: Record<string, unknown>) {
-  return formatScalar(value[MODEL_REASONING_EFFORT_KEY]);
-}
-
-/**
- * Assigns a trimmed string to a record, removing the key when the value is empty.
- */
-function assignTrimmed(record: Record<string, unknown>, key: string, value: string) {
-  const trimmed = value.trim();
-  if (trimmed) record[key] = trimmed;
-  else delete record[key];
-}
-
-/**
- * Copies a root config value into a provider record when the root value exists.
- */
-function assignRootValue(
-  provider: Record<string, unknown>,
-  root: Record<string, unknown>,
-  key: string,
-) {
-  if (root[key] !== undefined && root[key] !== null) provider[key] = root[key];
 }
 
 /**
