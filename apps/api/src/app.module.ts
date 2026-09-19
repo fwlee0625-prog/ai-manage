@@ -2,9 +2,15 @@ import { Module } from '@nestjs/common';
 import { AdapterRegistry } from './adapters/adapter-registry.js';
 import { CodexAdapter } from './adapters/codex.adapter.js';
 import { ClaudeAdapter } from './adapters/claude.adapter.js';
-import { PathGuard } from './fs/path-guard.js';
+import { CredentialStoreService } from './credentials/credential-store.service.js';
 import { IndexRepository } from './database/index.repository.js';
+import { ManageRepository } from './database/manage.repository.js';
+import { PathGuard } from './fs/path-guard.js';
 import { IndexingService } from './indexing/indexing.service.js';
+import { ProviderImportService } from './providers/provider-import.service.js';
+import { ProvidersController } from './providers/providers.controller.js';
+import { ProvidersRepository } from './providers/providers.repository.js';
+import { ProvidersService } from './providers/providers.service.js';
 import { TrashService } from './routes/trash.service.js';
 import { ConfigsController } from './routes/configs.controller.js';
 import { ConfigsService } from './routes/configs.service.js';
@@ -28,36 +34,7 @@ import { ToolsService } from './routes/tools.service.js';
 import { TrashController } from './routes/trash.controller.js';
 
 @Module({
-  controllers: [
-    ToolsController,
-    ConfigsController,
-    SkillsController,
-    SessionsController,
-    ProjectsController,
-    TerminalsController,
-    FilesController,
-    TrashController,
-    IndexingController,
-    LogsController,
-  ],
-  providers: [
-    AdapterRegistry,
-    CodexAdapter,
-    ClaudeAdapter,
-    PathGuard,
-    IndexRepository,
-    IndexingService,
-    TrashService,
-    ToolsService,
-    IndexRefreshService,
-    ProjectsService,
-    SessionsService,
-    TerminalsService,
-    TerminalsWebSocketServer,
-    LogsService,
-    ConfigsService,
-    SkillsService,
-    FilesService,
-  ],
+  controllers: [ToolsController, ConfigsController, ProvidersController, SkillsController, SessionsController, ProjectsController, TerminalsController, FilesController, TrashController, IndexingController, LogsController],
+  providers: [AdapterRegistry, CodexAdapter, ClaudeAdapter, PathGuard, IndexRepository, ManageRepository, IndexingService, TrashService, ToolsService, IndexRefreshService, ProjectsService, SessionsService, TerminalsService, TerminalsWebSocketServer, LogsService, ConfigsService, SkillsService, FilesService, CredentialStoreService, ProvidersRepository, ProvidersService, ProviderImportService],
 })
 export class AppModule {}
