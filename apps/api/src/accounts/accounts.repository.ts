@@ -95,6 +95,16 @@ export class AccountsRepository {
     `);
   }
 
+  /** Marks token material as freshly validated or refreshed. */
+  async touchToken(id: string): Promise<void> {
+    const now = new Date().toISOString();
+    await this.manage.exec(`
+      UPDATE managed_accounts
+      SET token_updated_at=${sqlString(now)}, status='active', updated_at=${sqlString(now)}
+      WHERE id=${sqlString(id)};
+    `);
+  }
+
   /** Deletes one account metadata record. */
   async delete(id: string): Promise<void> {
     await this.manage.exec(`DELETE FROM managed_accounts WHERE id=${sqlString(id)};`);

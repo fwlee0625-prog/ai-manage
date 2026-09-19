@@ -30,6 +30,13 @@ export class AccountsService {
 
     const identity = result.bundle.identity;
     const reauth = result.existingAccountId ? await this.repository.get(result.existingAccountId) : undefined;
+    if (result.existingAccountId && !reauth) throw new NotFoundException('Account not found');
+    if (reauth?.identitySubject && identity.identitySubject && reauth.identitySubject !== identity.identitySubject) {
+      throw new BadRequestException('Reauthentication returned a different ChatGPT identity');
+    }
+    if (reauth?.externalAccountId && identity.externalAccountId && reauth.externalAccountId !== identity.externalAccountId) {
+      throw new BadRequestException('Reauthentication returned a different ChatGPT workspace');
+    }
     const duplicate = await this.repository.findIdentity(identity.identitySubject, identity.externalAccountId);
     const current = reauth || duplicate;
     const id = current?.id || randomUUID();
@@ -83,7 +90,7 @@ export class AccountsService {
     if (!account) throw new NotFoundException('Managed account not found');
     try {
       const bundle = await this.oauth.tokenBundle(id);
-      if (account.status !== 'active') await this.repository.setStatus(id, 'active');
+      await this.repository.touchToken(id);
       return bundle;
     } catch {
       await this.repository.setStatus(id, 'reauth_required');

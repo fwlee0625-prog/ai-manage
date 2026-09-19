@@ -1,13 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { AiProviderProfile, AiTool, CreateProviderRequest, ProviderPreset, UpdateProviderRequest } from '@ai-manage/shared';
 import { randomUUID } from 'node:crypto';
+import { AccountsRepository } from '../accounts/accounts.repository.js';
 import { CredentialStoreService } from '../credentials/credential-store.service.js';
 import { findProviderPreset, providerPresets } from './provider-presets.js';
 import { ProvidersRepository } from './providers.repository.js';
 
 @Injectable()
 export class ProvidersService {
-  constructor(private readonly repository: ProvidersRepository, private readonly credentials: CredentialStoreService) {}
+  constructor(private readonly repository: ProvidersRepository, private readonly credentials: CredentialStoreService, private readonly accounts: AccountsRepository) {}
 
   /** Lists managed providers without secret values. */
   async list(tool?: AiTool): Promise<AiProviderProfile[]> {
@@ -49,7 +50,7 @@ export class ProvidersService {
       authMode: body.authMode || preset?.authMode || 'none', accountId: clean(body.accountId), credentialId: clean(credentialId),
       metadata, createdAt: now, updatedAt: now,
     };
-    this.validate(provider);
+    await this.validate(provider);
     await this.repository.save(provider);
     return this.withCredential(provider);
   }
@@ -76,7 +77,7 @@ export class ProvidersService {
       accountId: body.accountId === null ? undefined : clean(body.accountId) ?? current.accountId,
       credentialId, metadata: body.metadata ? { ...body.metadata } : current.metadata, updatedAt: new Date().toISOString(),
     };
-    this.validate(provider);
+    await this.validate(provider);
     await this.repository.save(provider);
     return this.withCredential(provider);
   }
@@ -96,9 +97,17 @@ export class ProvidersService {
     return this.create({ tool: current.tool, name: `${current.name} 副本`, providerType: current.providerType, endpoint: current.endpoint, apiProtocol: current.apiProtocol, defaultModel: current.defaultModel, reasoningEffort: current.reasoningEffort, authMode: current.authMode, accountId: current.accountId, metadata: { ...current.metadata, duplicatedFrom: current.id } });
   }
 
-  private validate(provider: AiProviderProfile): void {
-    if (provider.authMode === 'managed_account' && !provider.accountId) throw new BadRequestException('Managed account provider requires accountId');
-    if (provider.authMode !== 'managed_account' && provider.accountId) throw new BadRequestException('accountId is only valid for managed_account auth');
+  private async validate(provider: AiProviderProfile): Promise<void> {
+    if (provider.authMode === 'managed_account') {
+      if (provider.tool !== 'codex') throw new BadRequestException('Managed accounts are currently supported only for Codex');
+      if (!provider.accountId) throw new BadRequestException('Managed account provider requires accountId');
+      const account = await this.accounts.get(provider.accountId);
+      if (!account) throw new BadRequestException('Managed account does not exist');
+      if (account.status === 'invalid') throw new BadRequestException('Managed account is invalid');
+    }
+    if (provider.authMode !== 'managed_account' && provider.accountId) {
+      throw new BadRequestException('accountId is only valid for managed_account auth');
+    }
   }
 
   private async withCredential(provider: AiProviderProfile): Promise<AiProviderProfile> {

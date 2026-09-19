@@ -9,7 +9,11 @@ import ProviderGrid from './components/ProviderGrid.vue';
 import ProviderTestResult from './components/ProviderTestResult.vue';
 import { useProviders } from './use-providers';
 
-const accountVm = useAccounts();
+const {
+  accounts, centerVisible, deviceVisible, deviceLogin, polling,
+  openCenter, addAccount, reauth, setDefault, remove: removeAccount,
+  pollDeviceLogin, closeDeviceLogin,
+} = useAccounts();
 const {
   providers, presets, runtime, loading, saving, switchingId, drawerVisible, draft, editing,
   testResult, models, modelLoading, load, openCreate, openEdit, applyPreset, save,
@@ -26,7 +30,7 @@ const {
         <p>Provider 与账号身份独立管理，切换时由 Runtime Engine 投影到 live 配置。</p>
       </div>
       <div>
-        <el-button v-if="selectedTool === 'codex'" @click="accountVm.openCenter">账号中心</el-button>
+        <el-button v-if="selectedTool === 'codex'" @click="openCenter">账号中心</el-button>
         <el-button @click="importLive">导入当前配置</el-button>
         <el-button type="primary" @click="openCreate">添加供应商</el-button>
       </div>
@@ -48,7 +52,7 @@ const {
       v-model:visible="drawerVisible"
       v-model:draft="draft"
       :presets="presets"
-      :accounts="accountVm.accounts.value"
+      :accounts="accounts"
       :editing="editing"
       :saving="saving"
       :models="models"
@@ -56,23 +60,23 @@ const {
       @select-preset="applyPreset"
       @save="save"
       @fetch-models="fetchModels"
-      @open-accounts="accountVm.openCenter"
+      @open-accounts="openCenter"
     />
 
     <AccountCenterDrawer
-      v-model:visible="accountVm.centerVisible.value"
-      :accounts="accountVm.accounts.value"
-      @add="accountVm.addAccount"
-      @reauth="accountVm.reauth"
-      @set-default="accountVm.setDefault"
-      @remove="accountVm.remove"
+      v-model:visible="centerVisible"
+      :accounts="accounts"
+      @add="addAccount"
+      @reauth="reauth"
+      @set-default="setDefault"
+      @remove="removeAccount"
     />
     <DeviceLoginDialog
-      :visible="accountVm.deviceVisible.value"
-      :login="accountVm.deviceLogin.value"
-      :polling="accountVm.polling.value"
-      @close="accountVm.closeDeviceLogin"
-      @poll="accountVm.pollDeviceLogin"
+      :visible="deviceVisible"
+      :login="deviceLogin"
+      :polling="polling"
+      @close="closeDeviceLogin"
+      @poll="pollDeviceLogin"
     />
   </section>
 </template>

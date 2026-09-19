@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { AccountsRepository } from '../src/accounts/accounts.repository.js';
 import { CredentialStoreService } from '../src/credentials/credential-store.service.js';
 import { ManageRepository } from '../src/database/manage.repository.js';
 import { extractClaudeProviderCandidate, extractCodexProviderCandidates } from '../src/providers/provider-import.service.js';
@@ -14,7 +15,7 @@ describe('Providers domain', () => {
     const manage = ManageRepository.forDatabase(resolve(dir, 'manage.sqlite'));
     await manage.init();
     const credentials = CredentialStoreService.forFile(resolve(dir, 'credentials', 'api-keys.json'));
-    return { service: new ProvidersService(new ProvidersRepository(manage), credentials), credentials };
+    return { service: new ProvidersService(new ProvidersRepository(manage), credentials, new AccountsRepository(manage)), credentials };
   }
 
   it('creates preset providers without returning API keys', async () => {
