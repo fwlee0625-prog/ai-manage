@@ -4,6 +4,7 @@ import { computed, shallowRef, watch } from "vue";
 import { useRoute } from "vue-router";
 import {
   lastRefreshAt,
+  loadLastRefreshAt,
   refreshIndex,
   refreshing,
   selectedTool,
@@ -32,6 +33,7 @@ function applyRouteLayoutDefaults() {
 }
 
 watch(() => route.name, applyRouteLayoutDefaults, { immediate: true });
+watch(selectedTool, tool => loadLastRefreshAt(tool), { immediate: true });
 </script>
 
 <template>
