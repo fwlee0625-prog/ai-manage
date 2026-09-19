@@ -15,7 +15,7 @@ defineProps<{
   models: string[];
   modelLoading?: boolean;
 }>();
-defineEmits<{ save: []; selectPreset: [id: string]; fetchModels: []; openAccounts: [] }>();
+defineEmits<{ save: []; selectPreset: [id: string]; fetchModels: []; addAccount: [] }>();
 </script>
 
 <template>
@@ -37,7 +37,7 @@ defineEmits<{ save: []; selectPreset: [id: string]; fetchModels: []; openAccount
         :allow-managed-account="draft.tool === 'codex'"
         :credential-configured="draft.credentialConfigured"
         @update:account-id="draft.accountId = $event"
-        @add-account="$emit('openAccounts')"
+        @add-account="$emit('addAccount')"
       />
       <template v-if="draft.authMode === 'api_key'">
         <label>API Key</label>

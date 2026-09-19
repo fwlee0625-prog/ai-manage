@@ -45,7 +45,7 @@ function updateAccountId(value: string) {
             :disabled="account.status !== 'active'"
           />
         </el-select>
-        <el-button @click="emit('addAccount')">账号中心</el-button>
+        <el-button @click="emit('addAccount')">添加账号</el-button>
       </div>
       <p v-if="!accounts.length">请先添加 ChatGPT 账号。</p>
     </template>

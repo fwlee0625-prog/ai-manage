@@ -14,8 +14,11 @@ export function buildCodexProjection(input: ProjectionInput): ProjectionResult {
     ...(input.provider.endpoint ? { base_url: input.provider.endpoint } : {}),
     ...(input.provider.apiProtocol ? { wire_api: input.provider.apiProtocol } : {}),
   };
-  if (input.provider.authMode === 'api_key') projectedProvider.env_key = 'OPENAI_API_KEY';
-  else delete projectedProvider.env_key;
+  // Current Codex treats env_key as a process environment variable. AI Manage
+  // instead uses Codex's persisted auth.json path so switching also works when
+  // the user launches the bare CLI outside AI Manage.
+  delete projectedProvider.env_key;
+  projectedProvider.requires_openai_auth = input.provider.authMode !== 'none';
   providers[providerKey] = projectedProvider;
 
   config.model_provider = providerKey;
@@ -43,7 +46,10 @@ export function buildCodexProjection(input: ProjectionInput): ProjectionResult {
   }
   if (!input.credential) throw new BadRequestException('Provider API key credential is not configured');
   const auth = cloneRecord(input.currentAuth);
+  auth.auth_mode = 'apikey';
   auth.OPENAI_API_KEY = input.credential;
+  delete auth.tokens;
+  delete auth.last_refresh;
   return { config, auth, authTouched: true, warnings: [] };
 }
 

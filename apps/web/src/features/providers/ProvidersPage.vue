@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from 'vue';
 import { selectedTool } from '../../state/app-state';
 import AccountCenterDrawer from '../accounts/components/AccountCenterDrawer.vue';
 import DeviceLoginDialog from '../accounts/components/DeviceLoginDialog.vue';
@@ -10,7 +11,7 @@ import ProviderTestResult from './components/ProviderTestResult.vue';
 import { useProviders } from './use-providers';
 
 const {
-  accounts, centerVisible, deviceVisible, deviceLogin, polling,
+  accounts, centerVisible, deviceVisible, deviceLogin, polling, deviceStatus, lastAddedAccountId,
   openCenter, addAccount, reauth, setDefault, remove: removeAccount,
   pollDeviceLogin, closeDeviceLogin,
 } = useAccounts();
@@ -19,6 +20,11 @@ const {
   testResult, models, modelLoading, healthById, load, openCreate, openEdit, applyPreset, save,
   switchProvider, duplicate, remove, reorder, test, fetchModels, adoptLive, restoreManaged, importLive,
 } = useProviders();
+
+watch(lastAddedAccountId, (accountId) => {
+  if (!accountId || !drawerVisible.value || draft.value.authMode !== 'managed_account') return;
+  draft.value.accountId = accountId;
+});
 </script>
 
 <template>
@@ -74,7 +80,7 @@ const {
       @select-preset="applyPreset"
       @save="save"
       @fetch-models="fetchModels"
-      @open-accounts="openCenter"
+      @add-account="addAccount"
     />
 
     <AccountCenterDrawer
@@ -89,6 +95,7 @@ const {
       :visible="deviceVisible"
       :login="deviceLogin"
       :polling="polling"
+      :status="deviceStatus"
       @close="closeDeviceLogin"
       @poll="pollDeviceLogin"
     />

@@ -29,11 +29,12 @@ describe('SwitchService', () => {
     await manage.init();
     const credentials = CredentialStoreService.forFile(resolve(root, 'credentials.json'));
     const providersRepo = new ProvidersRepository(manage);
-    const providers = new ProvidersService(providersRepo, credentials, new AccountsRepository(manage));
+    const accountsRepo = new AccountsRepository(manage);
+    const providers = new ProvidersService(providersRepo, credentials, accountsRepo);
     const target = await providers.create({ tool: 'codex', name: 'Target', providerType: 'custom', endpoint: 'https://example.test', apiProtocol: 'responses', defaultModel: 'gpt-x', apiKey: 'secret' });
     const writer = new LiveFileWriterService(PathGuard.forRoots(codexRoot, claudeRoot));
     const runtimeRepo = new RuntimeRepository(manage);
-    const detector = new RuntimeDetectorService(writer, providersRepo, runtimeRepo);
+    const detector = new RuntimeDetectorService(writer, providersRepo, runtimeRepo, accountsRepo);
     const accounts = { authBundle: async () => { throw new Error('not used'); } } as AccountsService;
     const service = new SwitchService(providersRepo, credentials, accounts, writer, new SnapshotService(writer), detector, runtimeRepo);
 

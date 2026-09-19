@@ -24,7 +24,22 @@ describe('provider projections', () => {
     expect(result.config.features).toEqual({ one: true });
     expect(result.config.mcp_servers).toEqual({ demo: { command: 'x' } });
     expect(result.config.unknown).toBe(42);
-    expect(result.auth).toMatchObject({ OPENAI_API_KEY: 'secret', tokens: { keep: true } });
+    expect(result.config.model_providers).toMatchObject({
+      custom: { requires_openai_auth: true },
+    });
+    expect((result.config.model_providers as Record<string, Record<string, unknown>>).custom?.env_key).toBeUndefined();
+    expect(result.auth).toMatchObject({ auth_mode: 'apikey', OPENAI_API_KEY: 'secret' });
+    expect(result.auth?.tokens).toBeUndefined();
+  });
+
+  it('does not overwrite native Codex auth material', () => {
+    const result = buildCodexProjection({
+      provider: provider({ providerType: 'openai', authMode: 'native_login', metadata: { liveKey: 'openai' } }),
+      currentConfig: {},
+      currentAuth: { auth_mode: 'chatgpt', tokens: { keep: true } },
+    });
+    expect(result.authTouched).toBe(false);
+    expect(result.auth).toEqual({ auth_mode: 'chatgpt', tokens: { keep: true } });
   });
 
   it('preserves unrelated Claude settings and env fields', () => {

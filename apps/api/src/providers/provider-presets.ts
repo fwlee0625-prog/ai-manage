@@ -3,7 +3,7 @@ import type { AiTool, ProviderPreset } from '@ai-manage/shared';
 export const PROVIDER_PRESETS: ProviderPreset[] = [
   { id: 'openai-official', tool: 'codex', name: 'OpenAI Official', providerType: 'openai', endpoint: 'https://api.openai.com/v1', apiProtocol: 'responses', authMode: 'native_login', metadata: { official: true } },
   { id: 'openrouter', tool: 'codex', name: 'OpenRouter', providerType: 'openrouter', endpoint: 'https://openrouter.ai/api/v1', apiProtocol: 'responses', authMode: 'api_key', metadata: {} },
-  { id: 'deepseek', tool: 'codex', name: 'DeepSeek', providerType: 'deepseek', endpoint: 'https://api.deepseek.com', apiProtocol: 'chat', authMode: 'api_key', metadata: {} },
+  { id: 'deepseek', tool: 'codex', name: 'DeepSeek', providerType: 'deepseek', endpoint: 'https://api.deepseek.com', apiProtocol: 'responses', authMode: 'api_key', metadata: {} },
   { id: 'custom-openai-compatible', tool: 'codex', name: 'OpenAI Compatible', providerType: 'openai-compatible', apiProtocol: 'responses', authMode: 'api_key', metadata: { custom: true } },
   { id: 'claude-official', tool: 'claude', name: 'Claude Official', providerType: 'anthropic', endpoint: 'https://api.anthropic.com', apiProtocol: 'anthropic', authMode: 'native_login', metadata: { official: true } },
   { id: 'openrouter', tool: 'claude', name: 'OpenRouter', providerType: 'openrouter', endpoint: 'https://openrouter.ai/api/v1', apiProtocol: 'anthropic', authMode: 'api_key', metadata: {} },

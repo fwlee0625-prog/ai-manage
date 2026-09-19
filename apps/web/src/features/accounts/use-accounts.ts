@@ -1,6 +1,8 @@
 import { onUnmounted, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { ManagedAccount, StartDeviceLoginResponse } from '@ai-manage/shared';
+
+export type DeviceLoginState = 'idle' | 'requesting' | 'waiting' | 'success' | 'expired' | 'failed';
 import { api } from '../../api';
 import { selectedTool } from '../../state/app-state';
 
@@ -10,6 +12,8 @@ export function useAccounts() {
   const deviceVisible = ref(false);
   const deviceLogin = ref<StartDeviceLoginResponse>();
   const polling = ref(false);
+  const deviceStatus = ref<DeviceLoginState>('idle');
+  const lastAddedAccountId = ref('');
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   /** Loads managed Codex accounts while keeping Claude account UI empty. */
@@ -29,18 +33,30 @@ export function useAccounts() {
 
   /** Starts a new ChatGPT device-code login. */
   async function addAccount() {
+    clearPollTimer();
+    deviceVisible.value = true;
+    deviceStatus.value = 'requesting';
+    deviceLogin.value = undefined;
+    lastAddedAccountId.value = '';
     try {
       beginDeviceLogin(await api.startCodexDeviceLogin());
     } catch (error) {
+      deviceStatus.value = 'failed';
       ElMessage.error(error instanceof Error ? error.message : String(error));
     }
   }
 
   /** Starts reauthentication while preserving the stable local account id. */
   async function reauth(account: ManagedAccount) {
+    clearPollTimer();
+    deviceVisible.value = true;
+    deviceStatus.value = 'requesting';
+    deviceLogin.value = undefined;
+    lastAddedAccountId.value = '';
     try {
       beginDeviceLogin(await api.reauthAccount(account.id));
     } catch (error) {
+      deviceStatus.value = 'failed';
       ElMessage.error(error instanceof Error ? error.message : String(error));
     }
   }
@@ -74,20 +90,22 @@ export function useAccounts() {
       const result = await api.pollCodexDeviceLogin(login.loginId);
       if (result.status === 'complete') {
         clearPollTimer();
-        deviceVisible.value = false;
-        deviceLogin.value = undefined;
+        deviceStatus.value = 'success';
+        lastAddedAccountId.value = result.account?.id || '';
         ElMessage.success('ChatGPT 账号已添加');
         await loadAccounts();
         return;
       }
       if (result.status === 'expired') {
         clearPollTimer();
+        deviceStatus.value = 'expired';
         ElMessage.warning('设备登录已过期，请重新开始');
         return;
       }
       schedulePoll(login.intervalSeconds);
     } catch (error) {
       clearPollTimer();
+      deviceStatus.value = 'failed';
       ElMessage.error(error instanceof Error ? error.message : String(error));
     } finally {
       polling.value = false;
@@ -99,12 +117,14 @@ export function useAccounts() {
     clearPollTimer();
     deviceVisible.value = false;
     deviceLogin.value = undefined;
+    deviceStatus.value = 'idle';
   }
 
   function beginDeviceLogin(login: StartDeviceLoginResponse) {
     clearPollTimer();
     deviceLogin.value = login;
     deviceVisible.value = true;
+    deviceStatus.value = 'waiting';
     schedulePoll(login.intervalSeconds);
   }
 
@@ -131,6 +151,8 @@ export function useAccounts() {
     deviceVisible,
     deviceLogin,
     polling,
+    deviceStatus,
+    lastAddedAccountId,
     loadAccounts,
     openCenter,
     addAccount,
