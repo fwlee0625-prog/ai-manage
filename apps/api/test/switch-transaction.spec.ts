@@ -22,9 +22,9 @@ function harness(options: { writeError?: Error; verify?: boolean; commitError?: 
   const histories: Array<Record<string, unknown>> = [];
   let concurrentWrites = 0;
   let maxConcurrentWrites = 0;
-  const providers = { get: async (id: string) => provider(id, id.startsWith('claude') ? 'claude' : 'codex') } as ProvidersRepository;
-  const credentials = { hasCredential: async () => true, readApiKey: async () => 'secret' } as CredentialStoreService;
-  const accounts = { authBundle: async () => { throw new Error('not used'); } } as AccountsService;
+  const providers = { get: async (id: string) => provider(id, id.startsWith('claude') ? 'claude' : 'codex') } as unknown as ProvidersRepository;
+  const credentials = { hasCredential: async () => true, readApiKey: async () => 'secret' } as unknown as CredentialStoreService;
+  const accounts = { authBundle: async () => { throw new Error('not used'); } } as unknown as AccountsService;
   const writer = {
     readLive: async () => ({ config: {}, auth: {} }),
     writeProjection: async (_tool: AiTool) => {
@@ -39,9 +39,9 @@ function harness(options: { writeError?: Error; verify?: boolean; commitError?: 
         events.push('write:end');
       }
     },
-  } as LiveFileWriterService;
-  const snapshots = { capture: async (tool: AiTool) => ({ tool, files: [] }), restore: async () => { events.push('restore'); } } as SnapshotService;
-  const detector = { matchesProvider: async () => options.verify ?? true, summary: async (tool: AiTool) => summary(tool, 'current') } as RuntimeDetectorService;
+  } as unknown as LiveFileWriterService;
+  const snapshots = { capture: async (tool: AiTool) => ({ tool, files: [] }), restore: async () => { events.push('restore'); } } as unknown as SnapshotService;
+  const detector = { matchesProvider: async () => options.verify ?? true, summary: async (tool: AiTool) => summary(tool, 'current') } as unknown as RuntimeDetectorService;
   const runtime = {
     active: async () => undefined,
     setActive: async (tool: AiTool, providerId: string) => { events.push('commit'); if (options.commitError) throw options.commitError; return { tool, providerId, switchedAt: 'now' }; },
