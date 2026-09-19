@@ -17,6 +17,7 @@ import type {
   SaveConfigFileResponse,
   SaveSkillRequest,
   SaveSkillResponse,
+  ScanStatus,
   SessionDetail,
   SessionSummary,
   SessionsQuery,
@@ -49,7 +50,7 @@ export function createAiManageClient(options: AiManageClientOptions = {}) {
   return {
     tools: () => request<ToolStatus>(fetchImpl, baseUrl, '/api/tools'),
     indexStatus: (tool?: AiTool) => request<IndexStatus>(fetchImpl, baseUrl, `/api/index/status${tool ? `?tool=${tool}` : ''}`),
-    refresh: (tool?: AiTool) => request(fetchImpl, baseUrl, '/api/index/refresh', {
+    refresh: (tool?: AiTool) => request<ScanStatus[]>(fetchImpl, baseUrl, '/api/index/refresh', {
       method: 'POST',
       body: JSON.stringify({ tool }),
     }),
