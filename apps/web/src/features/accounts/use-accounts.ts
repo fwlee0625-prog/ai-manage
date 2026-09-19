@@ -1,10 +1,10 @@
 import { onUnmounted, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { ManagedAccount, StartDeviceLoginResponse } from '@ai-manage/shared';
-
-export type DeviceLoginState = 'idle' | 'requesting' | 'waiting' | 'success' | 'expired' | 'failed';
 import { api } from '../../api';
 import { selectedTool } from '../../state/app-state';
+
+export type DeviceLoginState = 'idle' | 'requesting' | 'waiting' | 'success' | 'expired' | 'failed';
 
 export function useAccounts() {
   const accounts = ref<ManagedAccount[]>([]);
