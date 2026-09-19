@@ -1,34 +1,19 @@
 <script setup lang="ts">
+import { selectedTool } from '../../state/app-state';
+import AccountCenterDrawer from '../accounts/components/AccountCenterDrawer.vue';
+import DeviceLoginDialog from '../accounts/components/DeviceLoginDialog.vue';
+import { useAccounts } from '../accounts/use-accounts';
 import CurrentRuntimeCard from './components/CurrentRuntimeCard.vue';
 import ProviderDrawer from './components/ProviderDrawer.vue';
 import ProviderGrid from './components/ProviderGrid.vue';
 import ProviderTestResult from './components/ProviderTestResult.vue';
 import { useProviders } from './use-providers';
 
+const accountVm = useAccounts();
 const {
-  providers,
-  presets,
-  runtime,
-  loading,
-  saving,
-  switchingId,
-  drawerVisible,
-  draft,
-  editing,
-  testResult,
-  models,
-  modelLoading,
-  load,
-  openCreate,
-  openEdit,
-  applyPreset,
-  save,
-  switchProvider,
-  duplicate,
-  remove,
-  test,
-  fetchModels,
-  importLive,
+  providers, presets, runtime, loading, saving, switchingId, drawerVisible, draft, editing,
+  testResult, models, modelLoading, load, openCreate, openEdit, applyPreset, save,
+  switchProvider, duplicate, remove, test, fetchModels, importLive,
 } = useProviders();
 </script>
 
@@ -38,13 +23,15 @@ const {
     <section class="toolbar">
       <div>
         <h2>供应商</h2>
-        <p>Provider 与凭据由 AI Manage 独立托管，live 配置只作为运行投影。</p>
+        <p>Provider 与账号身份独立管理，切换时由 Runtime Engine 投影到 live 配置。</p>
       </div>
       <div>
+        <el-button v-if="selectedTool === 'codex'" @click="accountVm.openCenter">账号中心</el-button>
         <el-button @click="importLive">导入当前配置</el-button>
         <el-button type="primary" @click="openCreate">添加供应商</el-button>
       </div>
     </section>
+
     <ProviderTestResult :result="testResult" />
     <ProviderGrid
       :providers="providers"
@@ -56,10 +43,12 @@ const {
       @test="test"
       @remove="remove"
     />
+
     <ProviderDrawer
       v-model:visible="drawerVisible"
       v-model:draft="draft"
       :presets="presets"
+      :accounts="accountVm.accounts.value"
       :editing="editing"
       :saving="saving"
       :models="models"
@@ -67,6 +56,23 @@ const {
       @select-preset="applyPreset"
       @save="save"
       @fetch-models="fetchModels"
+      @open-accounts="accountVm.openCenter"
+    />
+
+    <AccountCenterDrawer
+      v-model:visible="accountVm.centerVisible.value"
+      :accounts="accountVm.accounts.value"
+      @add="accountVm.addAccount"
+      @reauth="accountVm.reauth"
+      @set-default="accountVm.setDefault"
+      @remove="accountVm.remove"
+    />
+    <DeviceLoginDialog
+      :visible="accountVm.deviceVisible.value"
+      :login="accountVm.deviceLogin.value"
+      :polling="accountVm.polling.value"
+      @close="accountVm.closeDeviceLogin"
+      @poll="accountVm.pollDeviceLogin"
     />
   </section>
 </template>

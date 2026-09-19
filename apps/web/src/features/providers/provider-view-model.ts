@@ -11,6 +11,7 @@ export interface ProviderDraft {
   defaultModel: string;
   reasoningEffort: string;
   authMode: ProviderAuthMode;
+  accountId: string;
   apiKey: string;
   credentialConfigured: boolean;
   removeCredential: boolean;
@@ -20,7 +21,7 @@ export interface ProviderDraft {
 export function emptyProviderDraft(tool: AiTool): ProviderDraft {
   return {
     tool, name: '', providerType: '', endpoint: '', apiProtocol: '',
-    defaultModel: '', reasoningEffort: 'medium', authMode: 'api_key',
+    defaultModel: '', reasoningEffort: 'medium', authMode: 'api_key', accountId: '',
     apiKey: '', credentialConfigured: false, removeCredential: false,
   };
 }
@@ -31,7 +32,7 @@ export function providerToDraft(provider: AiProviderProfile): ProviderDraft {
     id: provider.id, tool: provider.tool, name: provider.name, providerType: provider.providerType,
     endpoint: provider.endpoint || '', apiProtocol: provider.apiProtocol || '',
     defaultModel: provider.defaultModel || '', reasoningEffort: provider.reasoningEffort || 'medium',
-    authMode: provider.authMode, apiKey: '', credentialConfigured: !!provider.credential?.configured,
+    authMode: provider.authMode, accountId: provider.accountId || '', apiKey: '', credentialConfigured: !!provider.credential?.configured,
     removeCredential: false,
   };
 }

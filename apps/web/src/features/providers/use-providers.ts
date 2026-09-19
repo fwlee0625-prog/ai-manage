@@ -67,17 +67,29 @@ export function useProviders() {
   async function save() {
     saving.value = true;
     try {
-      const body = {
-        tool: draft.value.tool, presetId: draft.value.presetId, name: draft.value.name,
-        providerType: draft.value.providerType, endpoint: draft.value.endpoint,
-        apiProtocol: draft.value.apiProtocol, defaultModel: draft.value.defaultModel,
-        reasoningEffort: draft.value.reasoningEffort, authMode: draft.value.authMode,
-        apiKey: draft.value.apiKey || undefined, removeCredential: draft.value.removeCredential,
+      const common = {
+        name: draft.value.name,
+        providerType: draft.value.providerType,
+        endpoint: draft.value.endpoint,
+        apiProtocol: draft.value.apiProtocol,
+        defaultModel: draft.value.defaultModel,
+        reasoningEffort: draft.value.reasoningEffort,
+        authMode: draft.value.authMode,
+        apiKey: draft.value.apiKey || undefined,
       };
       if (draft.value.id) {
-        await api.updateProvider(draft.value.id, body);
+        await api.updateProvider(draft.value.id, {
+          ...common,
+          accountId: draft.value.authMode === 'managed_account' ? (draft.value.accountId || null) : null,
+          removeCredential: draft.value.removeCredential,
+        });
       } else {
-        await api.createProvider(body);
+        await api.createProvider({
+          ...common,
+          tool: draft.value.tool,
+          presetId: draft.value.presetId,
+          accountId: draft.value.authMode === 'managed_account' ? (draft.value.accountId || undefined) : undefined,
+        });
       }
       drawerVisible.value = false;
       ElMessage.success('Provider 已保存');
