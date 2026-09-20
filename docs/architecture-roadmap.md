@@ -145,3 +145,11 @@ Managed Provider / Account
 ```
 
 旧的 Configs Provider CRUD 与公开 Codex auth API Key patch 路径已经退出主流程。
+
+### Phase 6 体验增强
+
+- App Sidebar 增加轻量 Runtime 快速切换，显示当前 Provider、账号/模型摘要与最近使用 Provider。
+- 快速切换只消费 Provider/Runtime API，并统一走 SwitchService，不复制完整 Provider 管理能力到 App Shell。
+- Overview 直接消费 RuntimeSummary 展示每个工具当前 Provider、模型、账号和同步状态。
+- Provider 顺序由 manage.sqlite 的 sort_index 持久化；复制默认不复制 Secret。
+- Provider 健康检查区分 healthy、auth_error、unreachable、invalid_config；native login 保持 unknown，避免一次临时网络错误形成永久错误状态。
