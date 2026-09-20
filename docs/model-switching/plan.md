@@ -18,7 +18,17 @@
 - Phase 3：✅ 已完成
 - Phase 4：✅ 已完成
 - Phase 5：✅ 已完成
-- Phase 6：⏳ 体验增强，按需继续
+- Phase 6：✅ 已完成
+
+### Phase 6 验收记录
+
+- App Sidebar 已增加轻量 Runtime 快速切换入口，展示当前 Provider、账号/模型摘要与最近使用 Provider。
+- 快速切换仍统一调用 Runtime Switch Engine，不绕过 snapshot / verify / rollback。
+- Overview 已展示每个工具的 RuntimeSummary，包括 Provider、模型、账号与同步状态。
+- Provider 已支持持久排序，并由 manage.sqlite 的 sort_index 保存顺序。
+- Provider 复制默认只复制非 Secret 配置，不复制 API Key。
+- Provider 健康状态支持 unknown / healthy / auth_error / unreachable / invalid_config，并补充状态映射测试。
+- 账号额度仍按方案定义为未来可选能力；本阶段不引入外部额度抓取或共享缓存。
 
 ### Phase 5 验收记录
 
