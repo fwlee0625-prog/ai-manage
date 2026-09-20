@@ -8,6 +8,31 @@
 >
 > 本计划强调分阶段迁移，不要求一次性重写全部功能。
 
+## 实施状态
+
+截至 2026-09-20：
+
+- Phase 0：✅ 已完成
+- Phase 1：✅ 已完成
+- Phase 2：✅ 已完成
+- Phase 3：✅ 已完成
+- Phase 4：✅ 已完成
+- Phase 5：✅ 已完成
+- Phase 6：⏳ 体验增强，按需继续
+
+### Phase 5 验收记录
+
+- RuntimeDetector 已覆盖 `synced`、`externally_modified`、`unmanaged`、`auth_invalid`、`reauth_required`。
+- 已提供 `POST /api/runtime/adopt-live` 与 `POST /api/runtime/restore-managed`。
+- `switch_history` 已进入 manage.sqlite，并提供查询接口。
+- “模型与账号”页面会在进入/刷新时读取实际 runtime，不会后台静默覆盖外部修改。
+- 首次迁移支持从当前 live 配置导入 Provider，导入过程不修改 live。
+- 旧 Configs Provider CRUD / activate 主路径已经退出；配置管理继续承担高级配置编辑。
+- 架构路线图已记录 managed state、providers/accounts/runtime 领域以及受控写入边界。
+- 已补 RuntimeSync 的采用 live、导入后采用、恢复 managed、无 active 拒绝恢复等验收测试。
+
+---
+
 ## 0. 执行规则
 
 开发前必须遵守以下规则：
