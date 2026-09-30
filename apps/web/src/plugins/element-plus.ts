@@ -2,6 +2,7 @@ import type { App, Component } from 'vue';
 import {
   ElAlert,
   ElAside,
+  ElAutocomplete,
   ElButton,
   ElCard,
   ElCheckbox,
@@ -23,6 +24,7 @@ import {
   ElMenu,
   ElMenuItem,
   ElOption,
+  ElPagination,
   ElPopover,
   ElRadioButton,
   ElRadioGroup,
@@ -43,6 +45,7 @@ import {
 const components: Component[] = [
   ElAlert,
   ElAside,
+  ElAutocomplete,
   ElButton,
   ElCard,
   ElCheckbox,
@@ -64,6 +67,7 @@ const components: Component[] = [
   ElMenu,
   ElMenuItem,
   ElOption,
+  ElPagination,
   ElPopover,
   ElRadioButton,
   ElRadioGroup,

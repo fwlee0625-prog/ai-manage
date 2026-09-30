@@ -40,6 +40,31 @@ export function normalizeText(value: unknown): string {
   }
 }
 
+/**
+ * Maps items with bounded concurrency, preserving the input order in the result.
+ *
+ * 用于对大量文件做受限并发处理（例如全量读取会话 jsonl 提取用量），
+ * 避免 `Promise.all` 一次性打开过多文件句柄触发 EMFILE。
+ */
+export async function mapWithLimit<T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  const workerCount = Math.max(1, Math.min(limit, items.length || 1));
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 export function fileFormat(filePath: string): 'json' | 'toml' | 'markdown' | 'jsonl' | 'text' {
   if (filePath.endsWith('.json')) return 'json';
   if (filePath.endsWith('.toml')) return 'toml';

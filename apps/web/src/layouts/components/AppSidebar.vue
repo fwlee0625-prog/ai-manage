@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { AiTool } from "@ai-manage/shared";
 import logoUrl from "../../assets/logo.svg";
-import QuickRuntimeSwitcher from "./QuickRuntimeSwitcher.vue";
 
 interface NavItem {
   /** Router path used by Element Plus menu navigation. */
@@ -26,6 +25,7 @@ const navItems: NavItem[] = [
   { index: "/skills", label: "技能管理" },
   { index: "/files", label: "文件浏览" },
   { index: "/sessions", label: "历史会话" },
+  { index: "/statistics", label: "用量统计" },
   { index: "/trash", label: "回收站" },
   { index: "/logs", label: "运行日志" },
 ];
@@ -52,10 +52,6 @@ const navItems: NavItem[] = [
             </el-select>
           </div>
         </div>
-      </div>
-
-      <div class="app-sidebar__quick-switch">
-        <QuickRuntimeSwitcher :tool="selectedTool" />
       </div>
 
       <slot name="content">
@@ -187,12 +183,6 @@ const navItems: NavItem[] = [
     0 10px 22px rgb(87 204 153 / 28%),
     inset 0 1px 0 rgb(255 255 255 / 46%);
   object-fit: cover;
-}
-
-.app-sidebar__quick-switch {
-  position: relative;
-  z-index: 1;
-  padding: 10px 12px 0;
 }
 
 .app-sidebar__nav {

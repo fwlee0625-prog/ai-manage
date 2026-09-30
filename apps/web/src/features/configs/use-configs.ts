@@ -5,14 +5,12 @@ import { api } from '../../api';
 import { refreshRevision, selectedTool } from '../../state/app-state';
 
 export type MenuSection = 'root' | 'markdown' | 'group';
-export type RootMenuKind = 'model' | 'behavior';
 
 export interface ConfigMenuItem {
   id: string;
   fileId: string;
   section: MenuSection;
   key?: string;
-  rootKind?: RootMenuKind;
   label: string;
   description: string;
 }
@@ -34,7 +32,6 @@ const MODEL_PROVIDERS_KEY = 'model_providers';
 const MODEL_KEY = 'model';
 const MODEL_REASONING_EFFORT_KEY = 'model_reasoning_effort';
 const ENV_KEY = 'env';
-const CLAUDE_ENV_PROVIDER_KEY = 'claude-env';
 const MODEL_ROOT_KEYS = new Set([
   MODEL_KEY,
   MODEL_PROVIDER_KEY,
@@ -105,10 +102,6 @@ const FIELD_META: Record<string, FieldMeta> = {
     label: '启用',
     description: '控制该功能、插件或配置项是否启用。',
   },
-  env: {
-    label: '模型配置',
-    description: 'Claude Code 启动和运行时使用的模型供应商配置。',
-  },
   permissions: {
     label: '权限规则',
     description: 'Claude Code 允许或拒绝执行的工具/命令规则。',
@@ -175,14 +168,13 @@ export function useConfigs() {
       ? selectedConfig.value.formModel
       : {}
   ));
-  const activeRootKind = computed(() => selectedMenuItem.value?.rootKind);
   const rootFields = computed(() => Object.fromEntries(
     Object.entries(draftRecord.value)
-      .filter(([key, value]) => activeRootKind.value && isRootFieldForKind(key, value, activeRootKind.value)),
+      .filter(([key, value]) => isBehaviorRootField(key, value)),
   ));
   const originalRootFields = computed(() => Object.fromEntries(
     Object.entries(originalRecord.value)
-      .filter(([key, value]) => activeRootKind.value && isRootFieldForKind(key, value, activeRootKind.value)),
+      .filter(([key, value]) => isBehaviorRootField(key, value)),
   ));
 
   const markdownDirty = computed(() => !!selectedConfig.value && draftRaw.value !== selectedConfig.value.raw);
@@ -360,9 +352,8 @@ export function useConfigs() {
   function modelWithRootFields() {
     const base = clone(selectedConfig.value?.formModel ?? {});
     if (!isRecord(base)) return clone(rootFields.value);
-    const rootKind = activeRootKind.value;
     for (const [key, value] of Object.entries(base)) {
-      if (rootKind && isRootFieldForKind(key, value, rootKind)) delete base[key];
+      if (isBehaviorRootField(key, value)) delete base[key];
     }
     return {
       ...base,
@@ -413,10 +404,9 @@ export function useConfigs() {
    */
   function updateRootFields(value: unknown) {
     if (!isRecord(value)) return;
-    const rootKind = activeRootKind.value;
     const next = { ...draftRecord.value };
     for (const [key, fieldValue] of Object.entries(next)) {
-      if (rootKind && isRootFieldForKind(key, fieldValue, rootKind)) delete next[key];
+      if (isBehaviorRootField(key, fieldValue)) delete next[key];
     }
     Object.assign(next, value);
     draftModel.value = next;
@@ -637,27 +627,13 @@ function menuItemsForDetail(detail: ConfigFileDetail): ConfigMenuItem[] {
 
   const record = isRecord(detail.formModel) ? detail.formModel : {};
   const items: ConfigMenuItem[] = [];
-  const root = Object.entries(record).filter(([, value]) => !isRecord(value));
-  const modelRoot = root.filter(([key]) => isModelRootKey(key));
-  const behaviorRoot = root.filter(([key]) => !isModelRootKey(key));
-  const hasModelProviders = isRecord(record[MODEL_PROVIDERS_KEY])
-    || (detail.tool === 'claude' && isRecord(record[ENV_KEY]));
-  if (modelRoot.length || hasModelProviders) {
-    items.push({
-      id: `${detail.id}:root:model`,
-      fileId: detail.id,
-      section: 'root',
-      rootKind: 'model',
-      label: '模型配置',
-      description: '默认模型、供应商连接和推理强度',
-    });
-  }
+  const behaviorRoot = Object.entries(record)
+    .filter(([key, value]) => isBehaviorRootField(key, value));
   if (behaviorRoot.length) {
     items.push({
       id: `${detail.id}:root:behavior`,
       fileId: detail.id,
       section: 'root',
-      rootKind: 'behavior',
       label: '全局行为',
       description: '通知、存储和运行时默认行为',
     });
@@ -693,21 +669,10 @@ function isModelRootKey(key: string) {
 }
 
 /**
- * Returns whether a non-object root-level field belongs to a logical root menu section.
+ * Returns whether a root-level field belongs to the behavior section (scalar, non-model fields).
  */
-function isRootFieldForKind(key: string, value: unknown, kind: RootMenuKind) {
-  if (isRecord(value)) return false;
-  if (kind === 'model' && [MODEL_PROVIDER_KEY, MODEL_KEY, MODEL_REASONING_EFFORT_KEY].includes(key)) return false;
-  const isModelField = isModelRootKey(key);
-  return kind === 'model' ? isModelField : !isModelField;
-}
-
-/**
- * Extracts the model provider object map from a parsed config record.
- */
-function modelProvidersRecord(record: Record<string, unknown>): Record<string, unknown> {
-  const providers = record[MODEL_PROVIDERS_KEY];
-  return isRecord(providers) ? providers : {};
+function isBehaviorRootField(key: string, value: unknown) {
+  return !isRecord(value) && !isModelRootKey(key);
 }
 
 /**
@@ -741,7 +706,6 @@ function categoryLabel(category: ConfigFileCategory) {
  */
 function groupLabel(key: string) {
   const labels: Record<string, string> = {
-    env: '模型配置',
     permissions: '权限配置',
     projects: '项目配置',
     model_providers: '模型供应商',
@@ -761,7 +725,6 @@ function groupLabel(key: string) {
  */
 function groupDescription(key: string) {
   const descriptions: Record<string, string> = {
-    env: '模型供应商、接口地址和认证变量',
     permissions: '工具权限、允许/拒绝规则和本地授权',
     projects: '不同项目路径下的信任级别和项目配置',
     model_providers: '模型供应商、接口地址和认证方式',
@@ -783,16 +746,6 @@ function formatSize(size: number) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
-}
-
-/**
- * Formats unknown scalar-like values for compact provider summaries.
- */
-function formatScalar(value: unknown) {
-  if (value === undefined || value === null) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return '';
 }
 
 /**

@@ -14,7 +14,7 @@ async function copyCode(code?: string) {
 <template>
   <el-dialog :model-value="visible" title="连接 ChatGPT 账号" width="520px" :close-on-click-modal="false" @close="$emit('close')">
     <el-alert v-if="status === 'requesting'" title="正在请求设备登录代码…" type="info" :closable="false" show-icon />
-    <el-alert v-else-if="status === 'success'" title="授权成功，账号已加入并可直接绑定到当前 Provider。" type="success" :closable="false" show-icon />
+    <el-alert v-else-if="status === 'success'" title="授权成功，账号已加入并可直接绑定到当前供应商。" type="success" :closable="false" show-icon />
     <el-alert v-else-if="status === 'expired'" title="设备登录已过期，请关闭后重新添加账号。" type="warning" :closable="false" show-icon />
     <el-alert v-else-if="status === 'failed'" title="设备登录失败，请关闭后重试。" type="error" :closable="false" show-icon />
 

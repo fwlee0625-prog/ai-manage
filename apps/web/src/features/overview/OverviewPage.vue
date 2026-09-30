@@ -1,40 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue';
-import { runtimeSyncStatusLabel, type ScanStatus } from '@ai-manage/shared';
+import { runtimeAuthModeLabel, runtimeSyncStatusLabel, type RuntimeSyncStatus } from '@ai-manage/shared';
 import { DsMetricCard, DsPanel, DsStatusPill } from '../../components/design-system';
 import { refreshRevision } from '../../state/app-state';
 import { useOverview } from './use-overview';
 
 const { toolStatus, runtimes, loadTools, toolLabel, formatTime } = useOverview();
-type MetricAccent = 'brand' | 'info' | 'warning' | 'danger';
-interface OverviewCard {
-  id: string;
-  title: string;
-  value: string;
-  description: string;
-  meta: string;
-  accent: MetricAccent;
-  tool: ScanStatus;
-}
 
 watch(refreshRevision, loadTools);
 onMounted(loadTools);
 
-const overviewCards = computed<OverviewCard[]>(() =>
-  toolStatus.tools.map(tool => ({
-    id: tool.tool,
-    title: `${toolLabel(tool.tool)} 工具`,
-    value: tool.available ? '在线' : '离线',
-    description: tool.available ? '索引与扫描路径可用' : '工具路径暂不可用',
-    meta: [
-      `配置文件 ${tool.configFileCount}`,
-      `会话索引 ${tool.sessionCount}`,
-      `最后扫描 ${formatTime(tool.lastIndexedAt)}`,
-    ].join(' · '),
-    accent: tool.available ? 'info' : 'danger',
-    tool,
-  })),
-);
+/** Maps a sync status to a status-pill tone; auth problems read as danger. */
+function syncTone(status?: RuntimeSyncStatus): 'success' | 'warning' | 'danger' {
+  if (status === 'synced') return 'success';
+  if (status === 'auth_invalid' || status === 'reauth_required') return 'danger';
+  return 'warning';
+}
 
 const summary = computed(() => {
   const total = toolStatus.tools.length;
@@ -55,14 +36,52 @@ const summary = computed(() => {
   <section class="overview-page">
     <DsPanel
       class="overview-hero"
-      title="总览"
-      description="本机 AI 工具配置、扫描状态与会话索引的统一入口"
+      title="当前运行环境"
+      description="各工具当前生效的供应商、模型与账号快照，只消费 RuntimeSummary，不读取或拼装 live 配置"
     >
       <template #actions>
-        <DsStatusPill tone="success">
-          {{ summary.available }}/{{ summary.total }} 可用
+        <DsStatusPill :tone="summary.available === summary.total ? 'success' : 'warning'">
+          {{ summary.available }}/{{ summary.total }} 工具可用
         </DsStatusPill>
       </template>
+      <div class="runtime-overview-grid">
+        <article v-for="tool in toolStatus.tools" :key="`runtime-${tool.tool}`" class="runtime-overview-card">
+          <header class="runtime-overview-card__header">
+            <div class="runtime-overview-card__id">
+              <span>{{ toolLabel(tool.tool) }}</span>
+              <strong>{{ runtimes[tool.tool]?.providerName || '未托管运行环境' }}</strong>
+            </div>
+            <DsStatusPill :tone="syncTone(runtimes[tool.tool]?.syncStatus)">
+              {{ runtimeSyncStatusLabel(runtimes[tool.tool]?.syncStatus) }}
+            </DsStatusPill>
+          </header>
+          <p class="runtime-overview-card__model mono">{{ runtimes[tool.tool]?.model || '未识别模型' }}</p>
+          <dl class="runtime-overview-card__metrics">
+            <div>
+              <dt>认证方式</dt>
+              <dd>{{ runtimeAuthModeLabel(runtimes[tool.tool]?.authMode) }}</dd>
+            </div>
+            <div>
+              <dt>推理强度</dt>
+              <dd>{{ runtimes[tool.tool]?.reasoningEffort || '-' }}</dd>
+            </div>
+            <div>
+              <dt>账号</dt>
+              <dd>{{ runtimes[tool.tool]?.accountSummary || '-' }}</dd>
+            </div>
+            <div>
+              <dt>最后切换</dt>
+              <dd>{{ formatTime(runtimes[tool.tool]?.lastSwitchedAt) }}</dd>
+            </div>
+          </dl>
+          <p v-if="!tool.available" class="runtime-overview-card__warn muted">
+            该工具当前离线，快照可能不可信
+          </p>
+        </article>
+      </div>
+    </DsPanel>
+
+    <DsPanel title="索引概况" description="本机扫描索引的总量统计（不限当前选择的配置）">
       <div class="overview-stats">
         <DsMetricCard
           title="工具总数"
@@ -90,42 +109,6 @@ const summary = computed(() => {
         />
       </div>
     </DsPanel>
-
-    <DsPanel title="当前运行环境" description="只消费 RuntimeSummary，不读取或拼装 live 配置">
-      <div class="runtime-overview-grid">
-        <article v-for="tool in toolStatus.tools" :key="`runtime-${tool.tool}`" class="runtime-overview-card">
-          <div>
-            <span>{{ toolLabel(tool.tool) }}</span>
-            <strong>{{ runtimes[tool.tool]?.providerName || '未托管运行环境' }}</strong>
-            <p>
-              {{ runtimes[tool.tool]?.model || '未识别模型' }}
-              <template v-if="runtimes[tool.tool]?.accountSummary"> · {{ runtimes[tool.tool]?.accountSummary }}</template>
-            </p>
-          </div>
-          <DsStatusPill :tone="runtimes[tool.tool]?.syncStatus === 'synced' ? 'success' : 'warning'">
-            {{ runtimeSyncStatusLabel(runtimes[tool.tool]?.syncStatus) }}
-          </DsStatusPill>
-        </article>
-      </div>
-    </DsPanel>
-
-    <section class="overview-grid">
-      <DsMetricCard
-        v-for="card in overviewCards"
-        :key="card.id"
-        :title="card.title"
-        :value="card.value"
-        :description="card.description"
-        :meta="card.meta"
-        :accent="card.accent"
-      >
-        <template #status>
-          <DsStatusPill :tone="card.tool.available ? 'success' : 'danger'">
-            {{ card.tool.available ? '可用' : '异常' }}
-          </DsStatusPill>
-        </template>
-      </DsMetricCard>
-    </section>
 
     <DsPanel title="工具详情" description="每个工具的根路径与最近扫描时间">
       <div class="tool-detail-list">
@@ -160,6 +143,9 @@ const summary = computed(() => {
   display: grid;
   gap: 16px;
   min-height: 0;
+  height: 100%;
+  align-content: start;
+  overflow: auto;
 }
 
 .overview-hero {
@@ -183,9 +169,7 @@ const summary = computed(() => {
 }
 
 .runtime-overview-card {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
   gap: 12px;
   padding: 14px;
   border: 1px solid var(--ds-color-border-soft);
@@ -193,15 +177,56 @@ const summary = computed(() => {
   background: var(--ds-color-surface-soft);
 }
 
-.runtime-overview-card div { display: grid; gap: 4px; }
-.runtime-overview-card span { color: var(--ds-color-text-muted); font-size: 12px; }
-.runtime-overview-card strong { font-size: 16px; }
-.runtime-overview-card p { margin: 0; color: var(--ds-color-text-muted); font-size: 12px; }
+.runtime-overview-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
 
-.overview-grid {
+.runtime-overview-card__id { display: grid; gap: 4px; }
+.runtime-overview-card__id span { color: var(--ds-color-text-muted); font-size: 12px; }
+.runtime-overview-card__id strong { font-size: 16px; }
+
+.runtime-overview-card__model {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.runtime-overview-card__metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 10px;
+  margin: 0;
+}
+
+.runtime-overview-card__metrics div {
+  padding: 10px 12px;
+  border: 1px solid var(--ds-color-border-soft);
+  border-radius: var(--ds-radius-control);
+  background: var(--ds-color-surface);
+}
+
+.runtime-overview-card__metrics dt {
+  color: var(--ds-color-text-muted);
+  font-size: 12px;
+}
+
+.runtime-overview-card__metrics dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtime-overview-card__warn {
+  margin: 0;
+  font-size: 12px;
 }
 
 .tool-detail-list {
@@ -264,7 +289,6 @@ const summary = computed(() => {
 
 @media (max-width: 1400px) {
   .overview-stats,
-  .overview-grid,
   .tool-detail-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

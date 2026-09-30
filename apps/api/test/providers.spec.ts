@@ -33,6 +33,25 @@ describe('Providers domain', () => {
     expect(service.presets('claude').map(item => item.id)).toContain('claude-official');
   });
 
+  it('offers 智谱 / Kimi / MiniMax presets per tool with the matching protocol and icon', async () => {
+    const { service } = await createService();
+    for (const tool of ['codex', 'claude'] as const) {
+      const presets = service.presets(tool);
+      const byId = Object.fromEntries(presets.map(item => [item.id, item]));
+      expect(Object.keys(byId)).toEqual(expect.arrayContaining(['zhipu', 'kimi', 'minimax']));
+      expect(byId.zhipu).toMatchObject({
+        endpoint: tool === 'codex' ? 'https://open.bigmodel.cn/api/paas/v4' : 'https://open.bigmodel.cn/api/anthropic',
+        apiProtocol: tool === 'codex' ? 'responses' : 'anthropic',
+        authMode: 'api_key',
+        icon: 'zhipu',
+      });
+      expect(byId.kimi.endpoint).toBe(tool === 'codex' ? 'https://api.moonshot.cn/v1' : 'https://api.moonshot.cn/anthropic');
+      expect(byId.minimax.endpoint).toBe(tool === 'codex' ? 'https://api.minimax.cn/v1' : 'https://api.minimax.cn/anthropic');
+      expect(byId.kimi.icon).toBe('kimi');
+      expect(byId.minimax.icon).toBe('minimax');
+    }
+  });
+
   it('extracts Codex and Claude live provider candidates', () => {
     expect(extractCodexProviderCandidates({ model_provider: 'openrouter', model: 'gpt-test', model_reasoning_effort: 'high', model_providers: { openrouter: { name: 'OpenRouter', base_url: 'https://openrouter.ai/api/v1', wire_api: 'responses' } } })[0]).toMatchObject({ sourceKey: 'openrouter', defaultModel: 'gpt-test', reasoningEffort: 'high' });
     expect(extractClaudeProviderCandidate({ env: { ANTHROPIC_BASE_URL: 'https://example.test', ANTHROPIC_API_KEY: 'secret', ANTHROPIC_MODEL: 'claude-test' } })).toMatchObject({ tool: 'claude', authMode: 'api_key', defaultModel: 'claude-test', apiKey: 'secret' });

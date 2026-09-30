@@ -1,9 +1,14 @@
 import { computed, ref, watch } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import type { AiProviderProfile, ProviderHealthStatus, ProviderPreset, ProviderTestResponse, RuntimeSummary } from '@ai-manage/shared';
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus';
+import type { AiProviderProfile, ProviderHealthStatus, ProviderPreset, RuntimeSummary } from '@ai-manage/shared';
 import { api } from '../../api';
 import { selectedTool } from '../../state/app-state';
 import { emptyProviderDraft, providerToDraft, type ProviderDraft } from './provider-view-model';
+
+/** Shows one provider test outcome as an Element Plus notification that closes itself after 3s. */
+function notifyTest(title: string, message: string, type: 'success' | 'warning' | 'error') {
+  ElNotification({ title, message, type, duration: 3000 });
+}
 
 export function useProviders() {
   const providers = ref<AiProviderProfile[]>([]);
@@ -12,10 +17,10 @@ export function useProviders() {
   const loading = ref(false);
   const saving = ref(false);
   const switchingId = ref('');
+  const testingId = ref('');
   const drawerVisible = ref(false);
   const draft = ref<ProviderDraft>(emptyProviderDraft(selectedTool.value));
   const editing = computed(() => !!draft.value.id);
-  const testResult = ref<ProviderTestResponse>();
   const models = ref<string[]>([]);
   const modelLoading = ref(false);
   const healthById = ref<Record<string, ProviderHealthStatus>>({});
@@ -38,7 +43,6 @@ export function useProviders() {
   /** Opens preset-first provider creation. */
   function openCreate() {
     draft.value = emptyProviderDraft(selectedTool.value);
-    testResult.value = undefined;
     models.value = [];
     drawerVisible.value = true;
   }
@@ -46,7 +50,6 @@ export function useProviders() {
   /** Opens provider editing with only a configured-secret indicator. */
   function openEdit(provider: AiProviderProfile) {
     draft.value = providerToDraft(provider);
-    testResult.value = undefined;
     models.value = [];
     drawerVisible.value = true;
   }
@@ -93,7 +96,7 @@ export function useProviders() {
         });
       }
       drawerVisible.value = false;
-      ElMessage.success('Provider 已保存');
+      ElMessage.success('供应商已保存');
       await load();
     } catch (error) { ElMessage.error(error instanceof Error ? error.message : String(error)); }
     finally { saving.value = false; }
@@ -114,24 +117,29 @@ export function useProviders() {
   /** Duplicates non-secret provider settings. */
   async function duplicate(provider: AiProviderProfile) {
     await api.duplicateProvider(provider.id);
-    ElMessage.success('Provider 已复制，凭据未复制');
+    ElMessage.success('供应商已复制，凭据未复制');
     await load();
   }
 
   /** Deletes one provider after explicit confirmation. */
   async function remove(provider: AiProviderProfile) {
-    await ElMessageBox.confirm(`确定删除“${provider.name}”吗？`, '删除 Provider', { type: 'warning' });
+    await ElMessageBox.confirm(`确定删除“${provider.name}”吗？`, '删除供应商', { type: 'warning' });
     await api.deleteProvider(provider.id);
-    ElMessage.success('Provider 已删除');
+    ElMessage.success('供应商已删除');
     await load();
   }
 
-  /** Tests one saved provider and stores a structured result. */
+  /** Tests one saved provider and reports the outcome in a notification that closes itself. */
   async function test(provider: AiProviderProfile) {
-    testResult.value = await api.testProvider(provider.id);
-    healthById.value = { ...healthById.value, [provider.id]: testResult.value.healthStatus };
-    if (testResult.value.ok) ElMessage.success(testResult.value.message);
-    else ElMessage.warning(testResult.value.message);
+    if (testingId.value) return;
+    testingId.value = provider.id;
+    try {
+      const result = await api.testProvider(provider.id);
+      healthById.value = { ...healthById.value, [provider.id]: result.healthStatus };
+      notifyTest(`${provider.name} 连通性测试`, result.message, result.ok ? 'success' : 'warning');
+    } catch (error) {
+      notifyTest(`${provider.name} 连通性测试`, error instanceof Error ? error.message : String(error), 'error');
+    } finally { testingId.value = ''; }
   }
 
   /** Fetches models from the current saved or unsaved draft. */
@@ -185,8 +193,8 @@ export function useProviders() {
   watch(selectedTool, () => { drawerVisible.value = false; load(); }, { immediate: true });
 
   return {
-    providers, presets, runtime, loading, saving, switchingId, drawerVisible, draft, editing,
-    testResult, models, modelLoading, healthById, load, openCreate, openEdit, applyPreset, save,
+    providers, presets, runtime, loading, saving, switchingId, testingId, drawerVisible, draft, editing,
+    models, modelLoading, healthById, load, openCreate, openEdit, applyPreset, save,
     switchProvider, duplicate, remove, test, fetchModels, adoptLive, restoreManaged, importLive,
   };
 }

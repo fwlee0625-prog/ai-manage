@@ -43,6 +43,11 @@
 - 已知非缺陷：Codex 原生登录缺少邮箱时，runtime 账号摘要展示账户 ID（UUID）。按“敏感内容原样展示、不做默认脱敏”的产品要求保留。
 - 删除 Phase 5 遗留的 `ModelProviderManager.vue` 后，`pnpm check` / `pnpm test` / `pnpm build` 复跑全部通过，`/providers` 及其余路由浏览器复测无 error。
 - Provider 卡片的「上移 / 下移」入口按需求移除（前端 `moveUp/moveDown`、`reorder` 链路一并清理）。后端 `PATCH /api/providers/reorder` 与 `sort_index` 保留，Phase 6 的持久排序能力仍在，只是暂时由创建 / 导入顺序决定展示次序；后续要拖拽排序可直接复用该接口。
+- 按需求撤下 `CurrentRuntimeCard` 的页面展示：`/providers` 顶部直接是「供应商」工具条。第 3.4 节描述的卡片布局自此失效，但其中定义的状态判定与 `adopt-live` / `restore-managed` 接口不变，两个动作的入口迁到工具条并按 `syncStatus` 条件显示。
+- `ModelPicker` 改为自由文本 + 建议（`el-autocomplete`）：`el-select allow-create` 在模型列表为空时提交不了自定义模型名，导致新增 Provider 的 `defaultModel` 落成空。修复后「获取不到模型」不再阻塞手填。
+- 界面文案统一用「供应商」指代 Provider（17 条文案 / 19 处字样，覆盖供应商页、抽屉、卡片空态、消息提示、顶栏与侧栏快速切换、账号中心、配置管理说明）。本文档与代码里的 `Provider` 仍是领域概念，不改名，只改面向用户的中文标签。
+- 第 3.8 节的前端测试结果提示改为 `ElNotification`（右上角、3s 自动关闭），并在「测试」按钮上加 `testingId` 的 loading / 重入保护；后端 `POST /api/providers/:id/test` 的响应结构不变。页面顶部原先常驻的 `ProviderTestResult` alert 与通知作用重复，已撤下，`use-providers` 的 `testResult` 状态随之删除。
+- 第 1.4 节的内置预设新增 智谱 GLM / Kimi / MiniMax（Codex 与 Claude 各一条，端点见 `apps/api/src/providers/provider-presets.ts`），并给 `ProviderPreset` 加了可选 `icon` 键；PC 端从 cc-switch(MIT) 复制品牌 SVG 到 `apps/web/src/assets/provider-icons/`，预设按钮渲染内联图标，无图标者退化为首字母占位。预设仍只是填表起点，`icon` 不参与投影，也不写入 Provider 记录。
 
 ### Phase 5 验收记录
 

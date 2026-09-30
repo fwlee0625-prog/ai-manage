@@ -6,6 +6,7 @@ defineProps<{
   providers: AiProviderProfile[];
   activeId?: string;
   switchingId?: string;
+  testingId?: string;
   healthById?: Record<string, ProviderHealthStatus>;
 }>();
 defineEmits<{
@@ -25,6 +26,7 @@ defineEmits<{
       :provider="provider"
       :active="provider.id === activeId"
       :switching="provider.id === switchingId"
+      :testing="provider.id === testingId"
       :health-status="healthById?.[provider.id] || 'unknown'"
       @switch="$emit('switch', provider)"
       @edit="$emit('edit', provider)"
@@ -33,6 +35,6 @@ defineEmits<{
       @remove="$emit('remove', provider)"
     />
   </div>
-  <el-empty v-else description="暂无托管 Provider" />
+  <el-empty v-else description="暂无托管供应商" />
 </template>
 <style scoped>.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}</style>

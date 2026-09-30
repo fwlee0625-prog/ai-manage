@@ -19,15 +19,15 @@ defineEmits<{ save: []; selectPreset: [id: string]; fetchModels: []; addAccount:
 </script>
 
 <template>
-  <el-drawer v-model="visible" :title="editing ? '编辑 Provider' : '添加 Provider'" size="520px">
+  <el-drawer v-model="visible" :title="editing ? '编辑供应商' : '添加供应商'" size="520px">
     <div class="form">
       <template v-if="!editing">
         <label>Preset</label>
         <ProviderPresetPicker v-model="draft.presetId" :presets="presets" @select="$emit('selectPreset', $event)" />
       </template>
       <label>名称</label><el-input v-model="draft.name" />
-      <label>Provider 类型</label><el-input v-model="draft.providerType" />
-      <label>Endpoint</label><el-input v-model="draft.endpoint" placeholder="https://..." />
+      <label>供应商类型</label><el-input v-model="draft.providerType" />
+      <label>接口地址</label><el-input v-model="draft.endpoint" placeholder="https://..." />
       <label>协议</label><el-input v-model="draft.apiProtocol" />
       <label>认证</label>
       <AuthBindingEditor

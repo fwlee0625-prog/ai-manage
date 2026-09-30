@@ -1,4 +1,5 @@
 import type { AiTool } from './common.js';
+import type { SessionUsage } from './statistics.js';
 
 export interface SessionSummary {
   id: string;
@@ -10,6 +11,8 @@ export interface SessionSummary {
   sourcePath: string;
   messageCount: number;
   preview: string;
+  /** Token 用量与工具调用统计（旧索引数据或解析失败时缺省）。 */
+  usage?: SessionUsage;
 }
 
 export interface SessionMessage {

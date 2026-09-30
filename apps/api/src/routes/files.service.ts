@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   AiTool,
+  SqliteFileOverview,
+  SqliteTableRows,
   ToolDirectoryListing,
   ToolFileBreadcrumb,
   ToolFileEntry,
@@ -13,9 +15,12 @@ import { basename, extname, relative, resolve } from 'node:path';
 import { AdapterRegistry } from '../adapters/adapter-registry.js';
 import type { AiToolAdapter } from '../adapters/ai-tool.adapter.js';
 import { PathGuard } from '../fs/path-guard.js';
+import { hasSqliteMagic, readSqliteRows, readSqliteTables } from '../fs/sqlite-file.js';
 
 const MAX_TEXT_PREVIEW_BYTES = 1024 * 1024;
 const MAX_IMAGE_PREVIEW_BYTES = 5 * 1024 * 1024;
+
+const SQLITE_EXTENSIONS = new Set(['.sqlite', '.sqlite3', '.db', '.db3']);
 
 const TEXT_EXTENSIONS = new Set([
   '.txt',
@@ -116,6 +121,18 @@ export class FilesService {
     const extension = extname(name).toLowerCase();
     const imageMimeType = IMAGE_MIME_TYPES.get(extension);
 
+    if (SQLITE_EXTENSIONS.has(extension)) {
+      if (!await hasSqliteMagic(filePath)) {
+        return this.unsupportedPreview(base, '不是有效的 SQLite 数据库文件');
+      }
+      return {
+        ...base,
+        previewType: 'sqlite',
+        mimeType: 'application/x-sqlite3',
+        supported: true,
+      };
+    }
+
     if (imageMimeType) {
       if (meta.size > MAX_IMAGE_PREVIEW_BYTES) {
         return this.unsupportedPreview(base, '图片文件过大，暂不支持预览');
@@ -141,6 +158,51 @@ export class FilesService {
       mimeType: 'text/plain; charset=utf-8',
       content: previewType === 'json' ? this.formatJson(raw) : raw,
       supported: true,
+    };
+  }
+
+  /** Returns the table list of a SQLite file inside a tool root, read-only. */
+  async sqliteOverview(tool?: AiTool, relativePath = ''): Promise<SqliteFileOverview> {
+    if (!tool) throw new BadRequestException('tool is required');
+    const adapter = this.requireAdapter(tool);
+    const filePath = this.resolveToolPath(adapter, relativePath);
+    const meta = await this.statExisting(filePath);
+    if (!meta.isFile()) throw new BadRequestException('Path is not a file');
+    if (!await hasSqliteMagic(filePath)) {
+      throw new BadRequestException('不是有效的 SQLite 数据库文件');
+    }
+
+    return {
+      tool: adapter.tool,
+      name: basename(filePath),
+      path: this.toRelativeToolPath(adapter, filePath),
+      size: meta.size,
+      updatedAt: meta.mtime.toISOString(),
+      tables: readSqliteTables(filePath),
+    };
+  }
+
+  /** Returns one page of rows from a SQLite table or view, read-only. */
+  async sqliteRows(
+    tool?: AiTool,
+    relativePath = '',
+    table = '',
+    page = 1,
+    pageSize = 50,
+  ): Promise<SqliteTableRows> {
+    if (!tool) throw new BadRequestException('tool is required');
+    const adapter = this.requireAdapter(tool);
+    const filePath = this.resolveToolPath(adapter, relativePath);
+    const meta = await this.statExisting(filePath);
+    if (!meta.isFile()) throw new BadRequestException('Path is not a file');
+    if (!await hasSqliteMagic(filePath)) {
+      throw new BadRequestException('不是有效的 SQLite 数据库文件');
+    }
+
+    return {
+      tool: adapter.tool,
+      path: this.toRelativeToolPath(adapter, filePath),
+      ...readSqliteRows(filePath, table, page, pageSize),
     };
   }
 

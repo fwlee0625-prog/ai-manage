@@ -16,7 +16,7 @@ const switchingId = ref('');
 
 const summaryLine = computed(() => {
   const parts = [runtime.value?.accountSummary, runtime.value?.model].filter(Boolean);
-  return parts.join(' · ') || '点击快速切换 Provider';
+  return parts.join(' · ') || '点击快速切换供应商';
 });
 
 const recentProviders = computed(() => {
@@ -109,14 +109,14 @@ watch(() => props.tool, load, { immediate: true });
     @visible-change="handleVisibleChange"
   >
     <button class="quick-runtime__trigger" type="button">
-      <span class="quick-runtime__label">{{ runtime?.providerName || '未识别 Provider' }}</span>
+      <span class="quick-runtime__label">{{ runtime?.providerName || '未识别供应商' }}</span>
       <span class="quick-runtime__summary">{{ summaryLine }}</span>
     </button>
 
     <template #dropdown>
       <el-dropdown-menu class="quick-runtime__menu">
         <el-dropdown-item disabled>
-          <span class="quick-runtime__menu-title">最近 Provider</span>
+          <span class="quick-runtime__menu-title">最近供应商</span>
         </el-dropdown-item>
         <el-dropdown-item
           v-for="provider in recentProviders"
@@ -132,7 +132,7 @@ watch(() => props.tool, load, { immediate: true });
           </span>
         </el-dropdown-item>
         <el-dropdown-item v-if="!recentProviders.length" disabled>
-          {{ loading ? '正在加载…' : '暂无 Provider' }}
+          {{ loading ? '正在加载…' : '暂无供应商' }}
         </el-dropdown-item>
         <el-dropdown-item divided command="manage">
           管理模型与账号

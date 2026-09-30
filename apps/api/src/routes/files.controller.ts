@@ -17,4 +17,28 @@ export class FilesController {
   filePreview(@Query('tool') tool?: AiTool, @Query('path') path?: string) {
     return this.service.filePreview(tool, path);
   }
+
+  /** Returns the table list of a SQLite file inside a tool root. */
+  @Get('sqlite/overview')
+  sqliteOverview(@Query('tool') tool?: AiTool, @Query('path') path?: string) {
+    return this.service.sqliteOverview(tool, path);
+  }
+
+  /** Returns one page of rows from a SQLite table or view. */
+  @Get('sqlite/rows')
+  sqliteRows(
+    @Query('tool') tool?: AiTool,
+    @Query('path') path?: string,
+    @Query('table') table?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.service.sqliteRows(
+      tool,
+      path,
+      table ?? '',
+      Number.parseInt(page ?? '', 10) || 1,
+      Number.parseInt(pageSize ?? '', 10) || 50,
+    );
+  }
 }

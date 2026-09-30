@@ -11,7 +11,7 @@ defineEmits<{ add: []; reauth: [account: ManagedAccount]; setDefault: [account: 
   <el-drawer v-model="visible" title="ChatGPT 账号中心" size="560px">
     <div class="account-center">
       <div class="account-center__intro">
-        <p>账号身份与 Provider 分离。Provider 通过账号绑定选择使用哪个 ChatGPT OAuth 身份。</p>
+        <p>账号身份与供应商分离。供应商通过账号绑定选择使用哪个 ChatGPT OAuth 身份。</p>
         <el-button type="primary" @click="$emit('add')">添加账号</el-button>
       </div>
       <div v-if="accounts.length" class="account-list">

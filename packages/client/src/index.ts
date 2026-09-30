@@ -16,6 +16,8 @@ import type {
   ClearTrashSessionsResponse,
   ConfigFileDetail,
   ConfigFileSummary,
+  DailyUsagePoint,
+  DailyUsageQuery,
   DeleteSessionResponse,
   FavoriteSkillResponse,
   IndexStatus,
@@ -44,11 +46,15 @@ import type {
   TerminalSessionSummary,
   ToolDirectoryListing,
   ToolFilePreview,
+  SqliteFileOverview,
+  SqliteTableRows,
   ToolStatus,
   TrashSessionDetail,
   TrashSessionFilePreview,
   TrashSessionSummary,
   UnfavoriteSkillResponse,
+  ProjectUsageStats,
+  UsageOverview,
 } from '@ai-manage/shared';
 
 export interface AiManageClientOptions {
@@ -122,6 +128,14 @@ export function createAiManageClient(options: AiManageClientOptions = {}) {
       const params = new URLSearchParams({ tool, path });
       return request<ToolFilePreview>(fetchImpl, baseUrl, `/api/files/preview?${params.toString()}`);
     },
+    sqliteOverview: (tool: AiTool, path: string) => {
+      const params = new URLSearchParams({ tool, path });
+      return request<SqliteFileOverview>(fetchImpl, baseUrl, `/api/files/sqlite/overview?${params.toString()}`);
+    },
+    sqliteRows: (tool: AiTool, path: string, table: string, page = 1, pageSize = 50) => {
+      const params = new URLSearchParams({ tool, path, table, page: String(page), pageSize: String(pageSize) });
+      return request<SqliteTableRows>(fetchImpl, baseUrl, `/api/files/sqlite/rows?${params.toString()}`);
+    },
     sessions: (query: SessionsQuery) => {
       const params = new URLSearchParams();
       Object.entries(query).forEach(([key, value]) => {
@@ -155,6 +169,16 @@ export function createAiManageClient(options: AiManageClientOptions = {}) {
       method: 'DELETE',
     }),
     logs: (tool?: AiTool) => request<LogEntry[]>(fetchImpl, baseUrl, `/api/logs${tool ? `?tool=${tool}` : ''}`),
+    statsOverview: (tool?: AiTool) => request<UsageOverview>(fetchImpl, baseUrl, `/api/stats/overview${tool ? `?tool=${tool}` : ''}`),
+    statsProjects: (tool?: AiTool) => request<ProjectUsageStats[]>(fetchImpl, baseUrl, `/api/stats/projects${tool ? `?tool=${tool}` : ''}`),
+    statsDaily: (query: DailyUsageQuery) => {
+      const params = new URLSearchParams();
+      Object.entries(query).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') params.set(key, String(value));
+      });
+      const queryString = params.toString();
+      return request<DailyUsagePoint[]>(fetchImpl, baseUrl, `/api/stats/daily${queryString ? `?${queryString}` : ''}`);
+    },
   };
 }
 

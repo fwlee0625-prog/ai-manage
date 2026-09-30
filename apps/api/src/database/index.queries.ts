@@ -19,7 +19,16 @@ export const SESSION_SELECT_COLUMNS = `
   updated_at AS updatedAt,
   source_path AS sourcePath,
   message_count AS messageCount,
-  preview
+  preview,
+  input_tokens AS inputTokens,
+  cache_read_tokens AS cacheReadTokens,
+  cache_write_tokens AS cacheWriteTokens,
+  output_tokens AS outputTokens,
+  total_tokens AS totalTokens,
+  tool_call_count AS toolCallCount,
+  tool_calls_json AS toolCallsJson,
+  models_json AS modelsJson,
+  model
 `;
 
 export function buildSessionQuerySql(query: SessionsQuery): SessionQuerySql {
@@ -61,4 +70,13 @@ function sessionConditions(query: SessionsQuery): string[] {
 
 function whereClause(conditions: string[]): string {
   return conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+}
+
+/**
+ * Joins already-escaped SQL conditions into a WHERE clause (empty when none).
+ *
+ * 供 repository 内新增聚合查询复用，保持与既有查询一致的拼接方式。
+ */
+export function conditionsToWhereClause(conditions: string[]): string {
+  return whereClause(conditions);
 }

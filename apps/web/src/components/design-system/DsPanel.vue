@@ -7,13 +7,15 @@ defineProps<{
   description?: string;
   compact?: boolean;
   fill?: boolean;
+  /** Transparent variant: no card background, border or shadow; header keeps its divider. */
+  plain?: boolean;
 }>();
 </script>
 
 <template>
   <section
     class="ds-panel"
-    :class="{ 'ds-panel--compact': compact, 'ds-panel--fill': fill }"
+    :class="{ 'ds-panel--compact': compact, 'ds-panel--fill': fill, 'ds-panel--plain': plain }"
   >
     <header
       v-if="title || description || $slots.header || $slots.actions"
@@ -49,6 +51,12 @@ defineProps<{
   height: 100%;
   min-height: 0;
   flex-direction: column;
+}
+
+.ds-panel--plain {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 .ds-panel__header {

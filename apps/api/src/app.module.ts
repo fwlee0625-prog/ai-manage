@@ -40,6 +40,8 @@ import { ProjectsController } from './routes/projects.controller.js';
 import { ProjectsService } from './routes/projects.service.js';
 import { SessionsController } from './routes/sessions.controller.js';
 import { SessionsService } from './routes/sessions.service.js';
+import { StatsController } from './routes/stats.controller.js';
+import { StatsService } from './routes/stats.service.js';
 import { SkillsController } from './routes/skills.controller.js';
 import { SkillsService } from './routes/skills.service.js';
 import { TerminalsController } from './routes/terminals.controller.js';
@@ -50,7 +52,7 @@ import { ToolsService } from './routes/tools.service.js';
 import { TrashController } from './routes/trash.controller.js';
 
 @Module({
-  controllers: [ToolsController, AccountsController, ConfigsController, ProvidersController, ProviderToolsController, RuntimeController, SkillsController, SessionsController, ProjectsController, TerminalsController, FilesController, TrashController, IndexingController, LogsController],
-  providers: [AdapterRegistry, AccountBindingsRepository, AccountResolverService, AccountsRepository, AccountsService, CodexOAuthService, CodexOAuthStoreService, CodexAdapter, ClaudeAdapter, PathGuard, IndexRepository, ManageRepository, IndexingService, TrashService, ToolsService, IndexRefreshService, ProjectsService, SessionsService, TerminalsService, TerminalsWebSocketServer, LogsService, ConfigsService, SkillsService, FilesService, CredentialStoreService, ProvidersRepository, ProvidersService, ProviderImportService, ProviderToolsService, RuntimeRepository, LiveFileWriterService, SnapshotService, RuntimeDetectorService, RuntimeSyncService, SwitchService],
+  controllers: [ToolsController, AccountsController, ConfigsController, ProvidersController, ProviderToolsController, RuntimeController, SkillsController, SessionsController, ProjectsController, StatsController, TerminalsController, FilesController, TrashController, IndexingController, LogsController],
+  providers: [AdapterRegistry, AccountBindingsRepository, AccountResolverService, AccountsRepository, AccountsService, CodexOAuthService, CodexOAuthStoreService, CodexAdapter, ClaudeAdapter, PathGuard, IndexRepository, ManageRepository, IndexingService, TrashService, ToolsService, IndexRefreshService, ProjectsService, SessionsService, StatsService, TerminalsService, TerminalsWebSocketServer, LogsService, ConfigsService, SkillsService, FilesService, CredentialStoreService, ProvidersRepository, ProvidersService, ProviderImportService, ProviderToolsService, RuntimeRepository, LiveFileWriterService, SnapshotService, RuntimeDetectorService, RuntimeSyncService, SwitchService],
 })
 export class AppModule {}

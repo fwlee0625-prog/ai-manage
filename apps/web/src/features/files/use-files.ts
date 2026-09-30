@@ -1,11 +1,16 @@
 import { computed, ref, watch } from 'vue';
 import type {
+  SqliteFileOverview,
+  SqliteTableRows,
   ToolDirectoryListing,
   ToolFileEntry,
   ToolFilePreview,
 } from '@ai-manage/shared';
 import { api } from '../../api';
 import { refreshRevision, selectedTool } from '../../state/app-state';
+
+/** File extensions that trigger the read-only SQLite table browser. */
+const SQLITE_EXTENSIONS = new Set(['.sqlite', '.sqlite3', '.db', '.db3']);
 
 /**
  * Encapsulates file browser state, navigation, and preview loading for the PC file view.
@@ -16,6 +21,13 @@ export function useFiles() {
   const preview = ref<ToolFilePreview>();
   const loadingFiles = ref(false);
   const loadingPreview = ref(false);
+
+  const sqliteOverview = ref<SqliteFileOverview>();
+  const sqliteRows = ref<SqliteTableRows>();
+  const sqliteActiveTable = ref('');
+  const sqlitePage = ref(1);
+  const sqlitePageSize = ref(50);
+  const loadingSqliteRows = ref(false);
 
   const entries = computed(() => listing.value?.entries || []);
   const parentPath = computed(() =>
@@ -57,6 +69,7 @@ export function useFiles() {
    */
   async function openDirectory(path: string) {
     preview.value = undefined;
+    resetSqliteState();
     await loadDirectory(path);
   }
 
@@ -69,6 +82,7 @@ export function useFiles() {
       return;
     }
     if (entry.kind === 'symlink') {
+      resetSqliteState();
       preview.value = {
         tool: entry.tool,
         name: entry.name,
@@ -85,9 +99,92 @@ export function useFiles() {
     loadingPreview.value = true;
     try {
       preview.value = await api.filePreview(selectedTool.value, entry.path);
+      if (preview.value.previewType === 'sqlite') {
+        await loadSqliteOverview(entry.path);
+      } else {
+        resetSqliteState();
+      }
+    } catch (error) {
+      resetSqliteState();
+      preview.value = {
+        tool: entry.tool,
+        name: entry.name,
+        path: entry.path,
+        size: entry.size,
+        updatedAt: entry.updatedAt,
+        previewType: 'unsupported',
+        supported: false,
+        reason: error instanceof Error ? error.message : '预览加载失败',
+      };
     } finally {
       loadingPreview.value = false;
     }
+  }
+
+  /**
+   * Loads the table list of a SQLite file and opens its first table.
+   */
+  async function loadSqliteOverview(path: string) {
+    const overview = await api.sqliteOverview(selectedTool.value, path);
+    sqliteOverview.value = overview;
+    sqliteRows.value = undefined;
+    await selectSqliteTable(overview.tables[0]?.name || '');
+  }
+
+  /**
+   * Switches the browsed table and resets pagination to the first page.
+   */
+  async function selectSqliteTable(name: string) {
+    sqliteActiveTable.value = name;
+    sqlitePage.value = 1;
+    await loadSqliteRows();
+  }
+
+  /**
+   * Loads one page of rows for the active SQLite table.
+   */
+  async function loadSqliteRows() {
+    if (!sqliteActiveTable.value || !preview.value) return;
+    loadingSqliteRows.value = true;
+    try {
+      sqliteRows.value = await api.sqliteRows(
+        selectedTool.value,
+        preview.value.path,
+        sqliteActiveTable.value,
+        sqlitePage.value,
+        sqlitePageSize.value,
+      );
+    } finally {
+      loadingSqliteRows.value = false;
+    }
+  }
+
+  /**
+   * Applies a page change from the SQLite data pager.
+   */
+  function changeSqlitePage(page: number) {
+    sqlitePage.value = page;
+    void loadSqliteRows();
+  }
+
+  /**
+   * Applies a page size change and jumps back to the first page.
+   */
+  function changeSqlitePageSize(size: number) {
+    sqlitePageSize.value = size;
+    sqlitePage.value = 1;
+    void loadSqliteRows();
+  }
+
+  /**
+   * Clears cached SQLite browser state so stale tables never leak across files.
+   */
+  function resetSqliteState() {
+    sqliteOverview.value = undefined;
+    sqliteRows.value = undefined;
+    sqliteActiveTable.value = '';
+    sqlitePage.value = 1;
+    loadingSqliteRows.value = false;
   }
 
   /**
@@ -110,6 +207,7 @@ export function useFiles() {
 
   watch([selectedTool, refreshRevision], () => {
     preview.value = undefined;
+    resetSqliteState();
     loadDirectory('');
   }, { immediate: true });
 
@@ -121,10 +219,19 @@ export function useFiles() {
     loadingFiles,
     loadingPreview,
     breadcrumbs,
+    sqliteOverview,
+    sqliteRows,
+    sqliteActiveTable,
+    sqlitePage,
+    sqlitePageSize,
+    loadingSqliteRows,
     entryPathLabel,
     loadDirectory,
     openDirectory,
     openEntry,
+    selectSqliteTable,
+    changeSqlitePage,
+    changeSqlitePageSize,
     formatSize,
     formatTime,
   };

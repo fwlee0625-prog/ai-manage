@@ -30,9 +30,6 @@ const props = defineProps<{
 }>();
 
 const hasRootFields = computed(() => Object.keys(props.rootFields).length > 0);
-const isModelRootSection = computed(
-  () => props.selectedMenuItem.rootKind === "model",
-);
 const selectedGroupKey = computed(() => props.selectedMenuItem.key || "");
 const groupItemDrawerVisible = shallowRef(false);
 const groupItemDrawerKey = shallowRef("");
@@ -221,16 +218,6 @@ const emit = defineEmits<{
           :field-meta="configFieldMeta"
           @update:model-value="emit('updateRootFields', $event)"
         />
-      </section>
-
-      <section v-if="isModelRootSection" class="config-section-card">
-        <div class="section-heading">
-          <div>
-            <h3>模型与账号已迁移</h3>
-            <p>Provider、API Key、账号绑定与运行环境切换由独立模块统一管理。</p>
-          </div>
-          <router-link to="/providers"><el-button type="primary" plain>前往模型与账号</el-button></router-link>
-        </div>
       </section>
     </template>
 

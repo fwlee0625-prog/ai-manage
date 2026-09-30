@@ -1,16 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import type { ConfigFileDetail, ConfigFileSummary, DeleteSessionResponse, LogEntry, SessionDetail, SessionSummary } from '@ai-manage/shared';
+import type { ConfigFileDetail, ConfigFileSummary, DeleteSessionResponse, LogEntry, SessionDetail, SessionSummary, SessionUsage } from '@ai-manage/shared';
 import { existsSync } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { PathGuard } from '../fs/path-guard.js';
 import { buildConfigSummary, readConfigDetail } from '../parsers/config-reader.js';
 import { readJsonl } from '../parsers/jsonl.js';
-import { normalizeText, stableId, toIsoFromMs } from '../utils.js';
+import { createCodexUsageCollector } from '../parsers/session-usage.js';
+import { mapWithLimit, normalizeText, stableId, toIsoFromMs } from '../utils.js';
 import { SqliteDatabase, sqlString } from '../database/sqlite-database.js';
 import type { AiToolAdapter } from './ai-tool.adapter.js';
 import { messageFromRaw } from './ai-tool.adapter.js';
 import { SessionDeleteBackup } from './session-delete.js';
+
+/** 全量读取 rollout jsonl 提取用量时的并发上限，避免打开过多文件句柄。 */
+const USAGE_SCAN_CONCURRENCY = 32;
 
 @Injectable()
 export class CodexAdapter implements AiToolAdapter {
@@ -159,9 +163,10 @@ export class CodexAdapter implements AiToolAdapter {
       ORDER BY COALESCE(updated_at_ms, updated_at * 1000) DESC
       LIMIT 5000;
     `);
-    return Promise.all(rows.map(async row => {
+    return mapWithLimit(rows, USAGE_SCAN_CONCURRENCY, async row => {
       const sourcePath = row.source_path || statePath;
       const dbUpdatedAt = row.updatedAt ? new Date(`${row.updatedAt}Z`).toISOString() : undefined;
+      const extracted = await this.extractUsage(sourcePath, row.tokens_used);
       return {
         id: row.id,
         tool: this.tool,
@@ -170,10 +175,38 @@ export class CodexAdapter implements AiToolAdapter {
         createdAt: row.createdAt ? new Date(`${row.createdAt}Z`).toISOString() : undefined,
         updatedAt: await this.latestSessionUpdatedAt(dbUpdatedAt, sourcePath),
         sourcePath,
-        messageCount: 0,
+        messageCount: extracted.messageCount,
         preview: row.preview || row.first_user_message || '',
+        ...(extracted.usage ? { usage: extracted.usage } : {}),
       };
-    }));
+    });
+  }
+
+  /**
+   * Extracts token usage and tool call stats from a rollout jsonl in one full pass.
+   *
+   * 顺带产出真实消息行数；rollout 文件缺失或解析异常时，退回 Codex state 库里的
+   * 累计 `tokens_used`（仅总量，无明细）。两处都取不到时返回 undefined。
+   */
+  private async extractUsage(
+    sourcePath: string,
+    tokensUsed?: number,
+  ): Promise<{ usage?: SessionUsage; messageCount: number }> {
+    if (!sourcePath.endsWith('.jsonl') || !existsSync(sourcePath)) {
+      return { usage: fallbackUsage(tokensUsed), messageCount: 0 };
+    }
+    try {
+      const rows = await readJsonl<Record<string, unknown>>(sourcePath);
+      const collector = createCodexUsageCollector();
+      for (const row of rows) collector.add(row);
+      const usage = collector.usage();
+      return {
+        usage: usage.totalTokens > 0 || usage.toolCallCount > 0 ? usage : fallbackUsage(tokensUsed),
+        messageCount: rows.length,
+      };
+    } catch {
+      return { usage: fallbackUsage(tokensUsed), messageCount: 0 };
+    }
   }
 
   private async deleteThreadRow(sessionId: string, backup: SessionDeleteBackup): Promise<void> {
@@ -267,4 +300,22 @@ export class CodexAdapter implements AiToolAdapter {
       else visit(full);
     }
   }
+}
+
+/**
+ * Builds a totals-only usage payload from Codex state db `tokens_used` when the
+ * rollout file cannot be parsed; returns undefined when the fallback value is empty.
+ */
+function fallbackUsage(tokensUsed?: number): SessionUsage | undefined {
+  const total = Number(tokensUsed || 0);
+  if (!Number.isFinite(total) || total <= 0) return undefined;
+  return {
+    inputTokens: 0,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    outputTokens: 0,
+    totalTokens: Math.floor(total),
+    toolCallCount: 0,
+    toolCallBreakdown: {},
+  };
 }

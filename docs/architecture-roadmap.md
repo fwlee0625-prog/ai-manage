@@ -118,8 +118,21 @@
 - Runtime 同步状态、认证模式与切换时间改为经 `packages/shared` 的 `formatters/runtime.ts` 输出中文标签，Overview / 快速切换 / Provider 卡片不再露出 `unmanaged`、`native_login` 和裸 ISO 时间。
 - `features/configs/components/ModelProviderManager.vue` 是 Phase 5 遗留的孤立组件，引用了已删除的 `use-configs` 类型而使 `vue-tsc` 失败。已确认新页面完全替代，随本次修复一并删除。
 - 删除该组件后重新执行 `pnpm check` / `pnpm test` / `pnpm build`，三者退出码均为 0；`/providers` 与 Overview、Configs、Sessions、Files 在浏览器中复测渲染正常、控制台无 error 与 Vue warning。
-- Provider 卡片移除「上移 / 下移」按钮，`ProviderCard` 的 `moveUp/moveDown`、`ProviderGrid` 的 `reorder`、`ProvidersPage` 与 `use-providers` 的对应处理一并删除。后端 `PATCH /api/providers/reorder` 与 `sort_index` 保留，Provider 顺序目前由创建 / 导入先后决定。
+- Provider 卡片移除「上移 / 下移」按钮，`ProviderCard` 的 `moveUp/moveDown`、`ProviderGrid` 的 `reorder`、`ProvidersPage` 与 `use-providers` 的对应处理一并删除。后端 `PATCH /api/providers/reorder` 与 `sort_index` 保留，Provider 顺序目前由创建 / 导入顺序决定。
+- 「当前运行环境」大卡片从 `/providers` 移除，同步状态与账号/模型摘要改由顶栏、侧栏快速切换承载。「采用当前状态」「恢复 AI Manage 配置」两个修复入口迁入「供应商」工具条，仅在 `syncStatus` 异常时出现；卡内原有的「刷新」按钮随之去掉，需要重新探测时刷新页面即可。`components/CurrentRuntimeCard.vue` 已无代码引用，待确认后再删。
+- 添加 / 编辑 Provider 抽屉的 `Endpoint` 标签改为「接口地址」，与投影目标（Codex `base_url`、Claude `ANTHROPIC_BASE_URL`）语义对齐。
+- `ModelPicker` 由 `el-select + allow-create` 改为 `el-autocomplete`。原实现在上游取不到模型列表时无法可靠提交自定义模型名（新建项在 blur / 列表刷新后丢失，保存下来 `defaultModel` 为空），且候选列表从不包含当前值。现在模型名始终是自由文本，`获取模型` 只作为建议来源，按输入做不区分大小写过滤。
 - 运行时账号摘要在没有邮箱时显示 Codex 的账户 ID（UUID）。按“敏感内容原样展示、不做默认脱敏”的产品要求保留，不视为缺陷。
+- 页面文案统一把 `Provider` 称为「供应商」，共 17 条文案、19 处字样：`ProvidersPage` 说明与导入提示、`ProviderDrawer`（标题 / 供应商类型）、`ProviderGrid` 空态、`use-providers` 的提示与确认（已保存 / 已复制 / 删除确认 / 已删除）、`QuickRuntimeSwitcher`（点击提示、未识别供应商、最近供应商、暂无供应商）、`RuntimeQuickSwitch` 空态、`AccountCenterDrawer` 说明、`DeviceLoginDialog` 授权成功提示、`ConfigEditorSections` 模型配置说明。类型名、组件名、字段与接口标识符不变，仅中文标签替换；代码注释里的 `Provider` 保留，因为它指代领域类型而非界面文案。
+- 改名后重跑 `pnpm check` / `pnpm test` / `pnpm build`，退出码分别为 0 / 0 / 0（22 个测试文件、69 条测试全通过）。浏览器复测 `/providers`、供应商抽屉、账号中心抽屉、顶栏快速切换、`/configs` 模型配置分组，整页文本已无 `Provider` 字样，控制台无 error 与 warning。
+- Provider 卡片上的 `<dt>Endpoint</dt>` 仍是英文，与抽屉的「接口地址」不一致；本轮只按要求改抽屉，卡片标签待产品确认后再统一。抽屉里的 `Preset` 标签同理。
+- 供应商连通性测试结果改用 `ElNotification`（右上角，`duration: 3000` 自动关闭），标题为「<供应商名> 连通性测试」、正文为后端 `message`，成功 `success` / 失败 `warning` / 请求异常 `error`，替代原先的 `ElMessage` 轻提示。同时给「测试」按钮补上 `testingId` 的 loading 与重入保护，避免连点产生并发探测。
+- 页面顶部 `ProviderTestResult` 的常驻 alert 与通知作用重复，已从 `/providers` 撤下：`ProvidersPage` 不再引用该组件，`use-providers` 也删掉了 `testResult` 状态（连带 `openCreate/openEdit` 的重置与 `ProviderTestResponse` 类型导入）。健康标签仍由 `healthById` 驱动，卡片上的「健康 / 认证异常」不受影响。`components/ProviderTestResult.vue` 自此无引用，与 `CurrentRuntimeCard.vue` 一并等待删除确认。
+- 撤下后重跑 `pnpm check` / `pnpm test` / `pnpm build`，退出码 0 / 0 / 0；浏览器实测：进入 `/providers` 顶部无 alert，点「测试」后按钮进入 loading，只有右上角通知出现（`position: fixed`，`x=1145, y=16, 330×84`，`opacity: 1`），存活约 3.4s（含淡出过渡）后自动消失，通知关闭后页面仍无常驻 alert，卡片健康标签正常刷新，控制台无 error 与 warning。
+- 预设供应商补齐智谱 GLM / Kimi / MiniMax 三家，Codex 与 Claude 各一条：Codex 走 OpenAI 兼容端点 + `responses`（`https://open.bigmodel.cn/api/paas/v4`、`https://api.moonshot.cn/v1`、`https://api.minimax.cn/v1`），Claude 走各家 Anthropic 兼容端点 + `anthropic`（`.../api/anthropic`、`.../anthropic`、`.../anthropic`）。端点取自各家当日官方文档；智谱另有 Coding 套餐专用 `/api/coding/paas/v4`，预设用通用端点，用户可在「接口地址」改。
+- `ProviderPreset` 契约新增可选 `icon` 键（`packages/shared/src/contracts/providers.ts`）。图标取自 cc-switch（MIT，`src/icons/extracted`）的 7 个品牌 SVG，落在 `apps/web/src/assets/provider-icons/`，每个文件头部保留来源与许可证署名；`?raw` 导入后由 `features/providers/provider-icons.ts` 按 key 索引，`ProviderPresetPicker` 用内联 SVG 渲染，因此 `currentColor` 的单色图标（OpenAI / Anthropic / OpenRouter）会跟随文字颜色。无 `icon` 的自定义预设退化为名称首字母圆形占位。
+- 新增后端断言：两家工具都必须含 `zhipu / kimi / minimax` 预设，且端点、协议、`authMode` 与 `icon` 匹配。`pnpm check` / `test` / `build` 退出码 0 / 0 / 0（22 文件 70 测试）；浏览器实测 Codex 预设网格 7 项全部带图标（自定义项为首字母占位），点「智谱 GLM」正确回填名称 / 类型 / 接口地址 / 协议，`GET /api/providers/presets?tool=claude` 返回三家 Anthropic 端点，控制台无 error 与 warning。
+- 遗留：既有 `deepseek` 的 Claude 预设端点仍是 `https://api.deepseek.com`，而 DeepSeek 的 Anthropic 兼容路径是 `/anthropic`，本轮未改动，待确认后统一。
 
 ## Shared 拆分记录
 
@@ -168,3 +181,14 @@ Managed Provider / Account
 - Overview 直接消费 RuntimeSummary 展示每个工具当前 Provider、模型、账号和同步状态。
 - Provider 顺序由 manage.sqlite 的 sort_index 持久化；复制默认不复制 Secret。
 - Provider 健康检查区分 healthy、auth_error、unreachable、invalid_config；native login 保持 unknown，避免一次临时网络错误形成永久错误状态。
+
+## 用量统计领域（2026-09）
+
+新增侧边栏「用量统计」页（`/statistics`），按项目 / 会话维度展示 Token 用量与工具调用统计。数据链路与口径如下：
+
+- 数据源为原始会话文件，扫描时顺带提取：Codex 取 rollout jsonl 中 `token_count` 事件的**累计快照**（最后一个非 null 值，不逐事件求和），工具调用按 `function_call` / `custom_tool_call` 计数，模型取最后一个 `turn_context`；rollout 缺失时退回 Codex state 库 `threads.tokens_used`（仅总量）。Claude 对 `projects/**/*.jsonl` 全量单遍扫描，逐条累加 assistant 行 `message.usage`（input / cache_read / cache_creation / output，total 为四项之和），工具调用按 `tool_use` 内容块计数，`isSidechain` 子代理流量计入。
+- 索引库 `index.sqlite` 新增迁移 v2 `add-session-usage-columns`：`sessions` 表增加 input_tokens / cache_read_tokens / cache_write_tokens / output_tokens / total_tokens / tool_call_count / tool_calls_json / model 八列。旧索引数据默认为 0，需在页面点一次「刷新索引」填充。
+- 两个 adapter 的扫描改为 `mapWithLimit`（并发 32）全量读文件，避免大量会话一次性打开过多文件句柄；Claude 侧顺带修正了此前 `readJsonl(file, 80) + countJsonl` 的双遍扫描。
+- 新端点：`GET /api/stats/overview`（总览，由项目级聚合归约）、`GET /api/stats/projects`（项目用量，按总 Token 降序）、`GET /api/stats/daily`（按日趋势，会话用量按 `updated_at` 归入当天，days 夹取 1~180）。共享契约在 `packages/shared/src/contracts/statistics.ts`，格式化（`formatTokenCount` / `usageSegments` / `sortToolCallBreakdown`）在 `formatters/usage.ts`，均为无 UI 依赖的纯函数。
+- 前端 `features/statistics`：`apps/web` 新增 echarts 依赖并按需注册（Line / Pie / Grid / Tooltip / Legend / Canvas）；页面含总览指标卡、按日堆叠面积图、工具调用环形图、项目用量列表（Token 构成比例条）与会话明细表（可排序、展开看工具调用分布）。会话明细复用 `GET /api/sessions` 按 `projectPath` 精确查询。
+- 口径说明：Codex `input_tokens` 含缓存命中、Claude 不含，页面文案与 `usageSegments` 已分别处理；按日趋势按会话最后更新时间归日，属已知简化（索引无逐轮时间戳）。

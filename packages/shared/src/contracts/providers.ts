@@ -32,6 +32,8 @@ export interface ProviderPreset {
   apiProtocol?: string;
   authMode: ProviderAuthMode;
   defaultModel?: string;
+  /** Brand icon key resolved to an SVG asset by the PC console. */
+  icon?: string;
   metadata: Record<string, unknown>;
 }
 

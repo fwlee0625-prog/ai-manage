@@ -1,15 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import type { ConfigFileDetail, ConfigFileSummary, DeleteSessionResponse, LogEntry, SessionDetail, SessionSummary } from '@ai-manage/shared';
+import type { ConfigFileDetail, ConfigFileSummary, DeleteSessionResponse, LogEntry, SessionDetail, SessionSummary, SessionUsage } from '@ai-manage/shared';
 import { existsSync } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { PathGuard } from '../fs/path-guard.js';
 import { buildConfigSummary, readConfigDetail } from '../parsers/config-reader.js';
-import { countJsonl, readJsonl } from '../parsers/jsonl.js';
-import { HOME_DIR, normalizeText, stableId } from '../utils.js';
+import { readJsonl } from '../parsers/jsonl.js';
+import { createClaudeUsageCollector } from '../parsers/session-usage.js';
+import { HOME_DIR, mapWithLimit, normalizeText, stableId } from '../utils.js';
 import type { AiToolAdapter } from './ai-tool.adapter.js';
 import { messageFromRaw } from './ai-tool.adapter.js';
 import { SessionDeleteBackup } from './session-delete.js';
+
+/** 全量读取项目 jsonl 提取用量时的并发上限，避免打开过多文件句柄。 */
+const USAGE_SCAN_CONCURRENCY = 32;
 
 @Injectable()
 export class ClaudeAdapter implements AiToolAdapter {
@@ -55,7 +59,7 @@ export class ClaudeAdapter implements AiToolAdapter {
       if (file.endsWith('.jsonl')) files.push(file);
     });
 
-    const sessions = await Promise.all(files.slice(0, 5000).map(file => this.summaryFromProjectFile(file)));
+    const sessions = await mapWithLimit(files.slice(0, 5000), USAGE_SCAN_CONCURRENCY, file => this.summaryFromProjectFile(file));
     return sessions.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
   }
 
@@ -98,25 +102,40 @@ export class ClaudeAdapter implements AiToolAdapter {
     return [];
   }
 
+  /**
+   * Reads a Claude project jsonl in a single full pass, deriving both the session
+   * summary and the token usage / tool call stats.
+   *
+   * 每条 assistant 行携带单次 API 调用的用量（无累计字段），必须全量逐行求和，
+   * 因此这里替代了原先「读前 80 行 + countJsonl 二次扫描」的做法。
+   */
   private async summaryFromProjectFile(file: string): Promise<SessionSummary> {
-    const rows = await readJsonl<Record<string, unknown>>(file, 80);
-    const firstMessage = rows.find(row => row.type === 'user' || row.message);
-    const last = rows.at(-1);
-    const sessionId = normalizeText(firstMessage?.sessionId || last?.sessionId || file.split('/').at(-1)?.replace(/\.jsonl$/, ''));
-    const projectPath = normalizeText(firstMessage?.cwd || this.projectPathFromFile(file));
+    const rows = await readJsonl<Record<string, unknown>>(file);
+    const collector = createClaudeUsageCollector();
+    let metaRow: Record<string, unknown> | undefined;
+    let lastRow: Record<string, unknown> | undefined;
+    for (const row of rows) {
+      collector.add(row);
+      if (!metaRow && (row.type === 'user' || row.message)) metaRow = row;
+      lastRow = row;
+    }
+    const sessionId = normalizeText(metaRow?.sessionId || lastRow?.sessionId || file.split('/').at(-1)?.replace(/\.jsonl$/, ''));
+    const projectPath = normalizeText(metaRow?.cwd || this.projectPathFromFile(file));
     const preview = this.previewFromRows(rows);
     const meta = await stat(file);
-    const messageCount = await countJsonl(file);
+    const usage = collector.usage();
+    const hasUsage = usage.totalTokens > 0 || usage.toolCallCount > 0;
     return {
       id: stableId(file),
       tool: this.tool,
       title: preview || sessionId || file.split('/').at(-1) || file,
       projectPath,
-      createdAt: typeof firstMessage?.timestamp === 'string' ? firstMessage.timestamp : meta.birthtime.toISOString(),
-      updatedAt: typeof last?.timestamp === 'string' ? last.timestamp : meta.mtime.toISOString(),
+      createdAt: typeof metaRow?.timestamp === 'string' ? metaRow.timestamp : meta.birthtime.toISOString(),
+      updatedAt: typeof lastRow?.timestamp === 'string' ? lastRow.timestamp : meta.mtime.toISOString(),
       sourcePath: file,
-      messageCount,
+      messageCount: rows.length,
       preview,
+      ...(hasUsage ? { usage } : {}),
     };
   }
 

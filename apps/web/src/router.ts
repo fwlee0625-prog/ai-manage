@@ -64,6 +64,12 @@ const managedConsoleRoutes: RouteRecordRaw[] = [
     meta: { title: "历史会话", sidebarOpen: true, headerOpen: true },
   },
   {
+    path: "statistics",
+    name: "statistics",
+    component: () => import("./features/statistics/StatisticsPage.vue"),
+    meta: { title: "用量统计", sidebarOpen: true, headerOpen: true },
+  },
+  {
     path: "trash",
     name: "trash",
     component: () => import("./features/trash/TrashPage.vue"),

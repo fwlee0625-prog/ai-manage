@@ -113,7 +113,7 @@ watch(selectedTool, () => void load(), { immediate: true });
           <el-tag v-if="provider.id === runtime?.managedProviderId" size="small" type="success">当前</el-tag>
           <span v-else-if="switchingId === provider.id">切换中…</span>
         </button>
-        <el-empty v-if="!recentProviders.length && !loading" description="暂无 Provider" :image-size="54" />
+        <el-empty v-if="!recentProviders.length && !loading" description="暂无供应商" :image-size="54" />
       </div>
 
       <router-link to="/providers" class="quick-switch__manage">管理模型与账号</router-link>

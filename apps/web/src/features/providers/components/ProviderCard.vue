@@ -5,6 +5,7 @@ defineProps<{
   provider: AiProviderProfile;
   active?: boolean;
   switching?: boolean;
+  testing?: boolean;
   healthStatus?: ProviderHealthStatus;
 }>();
 defineEmits<{ switch: []; edit: []; duplicate: []; test: []; remove: [] }>();
@@ -41,7 +42,7 @@ function healthType(status: ProviderHealthStatus = 'unknown'): 'success' | 'info
     </dl>
     <footer>
       <el-button size="small" @click="$emit('edit')">编辑</el-button>
-      <el-button size="small" @click="$emit('test')">测试</el-button>
+      <el-button size="small" :loading="testing" @click="$emit('test')">测试</el-button>
       <el-dropdown>
         <el-button size="small">更多</el-button>
         <template #dropdown><el-dropdown-menu>
