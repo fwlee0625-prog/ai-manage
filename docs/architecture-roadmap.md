@@ -102,9 +102,24 @@
 
 ## 最新验收记录
 
-- `pnpm check`：通过。
-- `pnpm test`：通过，7 个后端测试文件、20 条测试全部通过。
-- `pnpm build`：通过；仅保留第三方 `@vueuse/core` pure annotation warning，无业务侧 chunk 警告。
+- `pnpm check`：通过（4 个 workspace 包）。
+- `pnpm test`：通过，22 个后端测试文件、69 条测试全部通过。
+- `pnpm build`：通过；仅保留第三方 `@vueuse/core` pure annotation warning 与 vendor chunk size warning。
+
+### 2026-09-20 模型与账号页面修复轮
+
+上一轮记录的 `check/test 通过` 与真实结果不符，本轮按实际输出重新验收：
+
+- `plugins/element-plus.ts` 按需注册缺 `ElCheckbox / ElDialog / ElForm / ElPopover / ElStep / ElSteps`，导致侧栏快速切换、Provider 抽屉凭据区、账号设备登录弹窗整体不渲染。已补齐，并新增 `apps/web/scripts/check-element-plus-registrations.mjs` 挂进 `check` / `test` 防回归。
+- `packages/client/dist` 停留在 7/13 产物，不含 providers / runtime / accounts 接口；Vite dev 直接加载它，`/providers` 首屏取数静默失败，而 `check/test` 因类型走 `src` 而照样通过。已重建，并让 `apps/web` 的 `dev` 脚本先构建 `shared` 与 `client`。
+- Codex 官方原生登录（config.toml 无 `model_provider` / `model_providers`）此前既导入不出候选、也无法被 RuntimeDetector 匹配，“导入当前配置”和“采用当前状态”恒失败。现在会把这种隐式官方态识别为一个 `openai` native_login Provider。
+- Provider 创建时若带 API Key 但未显式指定 `authMode`，凭据会被静默丢弃；现在按 `api_key` 推断。
+- 请求失败不再把 NestJS 原始 JSON 信封抛给用户，`packages/client` 统一提取可读 `message`。
+- Runtime 同步状态、认证模式与切换时间改为经 `packages/shared` 的 `formatters/runtime.ts` 输出中文标签，Overview / 快速切换 / Provider 卡片不再露出 `unmanaged`、`native_login` 和裸 ISO 时间。
+- `features/configs/components/ModelProviderManager.vue` 是 Phase 5 遗留的孤立组件，引用了已删除的 `use-configs` 类型而使 `vue-tsc` 失败。已确认新页面完全替代，随本次修复一并删除。
+- 删除该组件后重新执行 `pnpm check` / `pnpm test` / `pnpm build`，三者退出码均为 0；`/providers` 与 Overview、Configs、Sessions、Files 在浏览器中复测渲染正常、控制台无 error 与 Vue warning。
+- Provider 卡片移除「上移 / 下移」按钮，`ProviderCard` 的 `moveUp/moveDown`、`ProviderGrid` 的 `reorder`、`ProvidersPage` 与 `use-providers` 的对应处理一并删除。后端 `PATCH /api/providers/reorder` 与 `sort_index` 保留，Provider 顺序目前由创建 / 导入先后决定。
+- 运行时账号摘要在没有邮箱时显示 Codex 的账户 ID（UUID）。按“敏感内容原样展示、不做默认脱敏”的产品要求保留，不视为缺陷。
 
 ## Shared 拆分记录
 

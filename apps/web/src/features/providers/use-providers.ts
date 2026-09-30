@@ -126,16 +126,6 @@ export function useProviders() {
     await load();
   }
 
-  /** Persists a user-selected Provider order for the current tool. */
-  async function reorder(providerIds: string[]) {
-    try {
-      providers.value = await api.reorderProviders({ tool: selectedTool.value, providerIds });
-    } catch (error) {
-      ElMessage.error(error instanceof Error ? error.message : String(error));
-      await load();
-    }
-  }
-
   /** Tests one saved provider and stores a structured result. */
   async function test(provider: AiProviderProfile) {
     testResult.value = await api.testProvider(provider.id);
@@ -197,6 +187,6 @@ export function useProviders() {
   return {
     providers, presets, runtime, loading, saving, switchingId, drawerVisible, draft, editing,
     testResult, models, modelLoading, healthById, load, openCreate, openEdit, applyPreset, save,
-    switchProvider, duplicate, remove, reorder, test, fetchModels, adoptLive, restoreManaged, importLive,
+    switchProvider, duplicate, remove, test, fetchModels, adoptLive, restoreManaged, importLive,
   };
 }

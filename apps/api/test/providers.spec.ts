@@ -37,4 +37,22 @@ describe('Providers domain', () => {
     expect(extractCodexProviderCandidates({ model_provider: 'openrouter', model: 'gpt-test', model_reasoning_effort: 'high', model_providers: { openrouter: { name: 'OpenRouter', base_url: 'https://openrouter.ai/api/v1', wire_api: 'responses' } } })[0]).toMatchObject({ sourceKey: 'openrouter', defaultModel: 'gpt-test', reasoningEffort: 'high' });
     expect(extractClaudeProviderCandidate({ env: { ANTHROPIC_BASE_URL: 'https://example.test', ANTHROPIC_API_KEY: 'secret', ANTHROPIC_MODEL: 'claude-test' } })).toMatchObject({ tool: 'claude', authMode: 'api_key', defaultModel: 'claude-test', apiKey: 'secret' });
   });
+
+  it('surfaces native-login Codex configs without model_providers as one official candidate', () => {
+    const candidates = extractCodexProviderCandidates({ model: 'gpt-test', model_reasoning_effort: 'medium', projects: {} });
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      sourceKey: 'openai', tool: 'codex', name: 'OpenAI Official', providerType: 'openai',
+      endpoint: '', apiProtocol: '', defaultModel: 'gpt-test', reasoningEffort: 'medium',
+      authMode: 'native_login', metadata: { importSourceKey: 'openai' },
+    });
+  });
+
+  it('does not add an official candidate when a third-party provider is already active', () => {
+    const candidates = extractCodexProviderCandidates({
+      model_provider: 'deepseek', model: 'deepseek-chat',
+      model_providers: { deepseek: { name: 'DeepSeek', base_url: 'https://api.deepseek.com' } },
+    });
+    expect(candidates.map(item => item.sourceKey)).toEqual(['deepseek']);
+  });
 });

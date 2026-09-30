@@ -81,6 +81,11 @@ async function switchProvider(providerId: string) {
   }
 }
 
+/** Reloads runtime data only when the dropdown opens, keeping the compact trigger cheap. */
+function handleVisibleChange(visible: boolean) {
+  if (visible) void load();
+}
+
 /** Handles dropdown commands without exposing Provider management actions inside the compact switcher. */
 async function handleCommand(command: string) {
   if (command === 'manage') {
@@ -101,7 +106,7 @@ watch(() => props.tool, load, { immediate: true });
     trigger="click"
     :hide-on-click="false"
     @command="handleCommand"
-    @visible-change="visible => visible && load()"
+    @visible-change="handleVisibleChange"
   >
     <button class="quick-runtime__trigger" type="button">
       <span class="quick-runtime__label">{{ runtime?.providerName || '未识别 Provider' }}</span>

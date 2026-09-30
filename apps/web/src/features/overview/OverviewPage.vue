@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue';
-import type { ScanStatus } from '@ai-manage/shared';
+import { runtimeSyncStatusLabel, type ScanStatus } from '@ai-manage/shared';
 import { DsMetricCard, DsPanel, DsStatusPill } from '../../components/design-system';
 import { refreshRevision } from '../../state/app-state';
 import { useOverview } from './use-overview';
@@ -96,14 +96,14 @@ const summary = computed(() => {
         <article v-for="tool in toolStatus.tools" :key="`runtime-${tool.tool}`" class="runtime-overview-card">
           <div>
             <span>{{ toolLabel(tool.tool) }}</span>
-            <strong>{{ runtimes[tool.tool]?.providerName || '未识别 Provider' }}</strong>
+            <strong>{{ runtimes[tool.tool]?.providerName || '未托管运行环境' }}</strong>
             <p>
               {{ runtimes[tool.tool]?.model || '未识别模型' }}
               <template v-if="runtimes[tool.tool]?.accountSummary"> · {{ runtimes[tool.tool]?.accountSummary }}</template>
             </p>
           </div>
           <DsStatusPill :tone="runtimes[tool.tool]?.syncStatus === 'synced' ? 'success' : 'warning'">
-            {{ runtimes[tool.tool]?.syncStatus || 'unmanaged' }}
+            {{ runtimeSyncStatusLabel(runtimes[tool.tool]?.syncStatus) }}
           </DsStatusPill>
         </article>
       </div>

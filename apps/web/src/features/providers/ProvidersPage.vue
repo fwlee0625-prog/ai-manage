@@ -18,7 +18,7 @@ const {
 const {
   providers, presets, runtime, loading, saving, switchingId, drawerVisible, draft, editing,
   testResult, models, modelLoading, healthById, load, openCreate, openEdit, applyPreset, save,
-  switchProvider, duplicate, remove, reorder, test, fetchModels, adoptLive, restoreManaged, importLive,
+  switchProvider, duplicate, remove, test, fetchModels, adoptLive, restoreManaged, importLive,
 } = useProviders();
 
 watch(lastAddedAccountId, (accountId) => {
@@ -65,7 +65,6 @@ watch(lastAddedAccountId, (accountId) => {
       @duplicate="duplicate"
       @test="test"
       @remove="remove"
-      @reorder="reorder"
     />
 
     <ProviderDrawer

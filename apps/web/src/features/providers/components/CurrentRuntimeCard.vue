@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { RuntimeSummary } from '@ai-manage/shared';
+import { formatRuntimeTimestamp, runtimeAuthModeLabel, runtimeSyncStatusLabel, type RuntimeSummary } from '@ai-manage/shared';
 
 const props = defineProps<{ runtime?: RuntimeSummary; loading?: boolean }>();
 defineEmits<{ refresh: []; adopt: []; restore: [] }>();
 
-const statusLabel = computed(() => ({
-  synced: '已同步',
-  externally_modified: '检测到外部修改',
-  unmanaged: '未托管',
-  auth_invalid: '认证无效',
-  reauth_required: '需要重新认证',
-}[props.runtime?.syncStatus || 'unmanaged']));
+const statusLabel = computed(() => runtimeSyncStatusLabel(props.runtime?.syncStatus));
+const headline = computed(() => props.runtime?.providerName || '未托管运行环境');
+const summary = computed(() => [
+  props.runtime?.model || '未识别模型',
+  runtimeAuthModeLabel(props.runtime?.authMode),
+  props.runtime?.accountSummary,
+].filter(Boolean).join(' · '));
+const lastSwitchedAt = computed(() => formatRuntimeTimestamp(props.runtime?.lastSwitchedAt));
 
 const statusType = computed(() => {
   if (props.runtime?.syncStatus === 'synced') return 'success';
@@ -24,13 +25,9 @@ const statusType = computed(() => {
   <section class="runtime-card">
     <div>
       <span class="eyebrow">当前运行环境</span>
-      <h2>{{ runtime?.providerName || '未识别 Provider' }}</h2>
-      <p>
-        {{ runtime?.model || '未识别模型' }}
-        · {{ runtime?.authMode || '认证未知' }}
-        <template v-if="runtime?.accountSummary"> · {{ runtime.accountSummary }}</template>
-      </p>
-      <p v-if="runtime?.lastSwitchedAt" class="runtime-card__time">最后切换：{{ runtime.lastSwitchedAt }}</p>
+      <h2>{{ headline }}</h2>
+      <p>{{ summary }}</p>
+      <p v-if="lastSwitchedAt" class="runtime-card__time">最后切换：{{ lastSwitchedAt }}</p>
     </div>
     <div class="runtime-card__status">
       <el-tag :type="statusType">{{ statusLabel }}</el-tag>

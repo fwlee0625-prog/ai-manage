@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "pnpm --filter @ai-manage/shared --filter @ai-manage/client build && vite --host 127.0.0.1",
     "build": "pnpm --filter @ai-manage/shared build && pnpm --filter @ai-manage/client build && vue-tsc --noEmit && vite build",
-    "check": "vue-tsc --noEmit",
-    "test": "vue-tsc --noEmit"
+    "check": "node scripts/check-element-plus-registrations.mjs && vue-tsc --noEmit",
+    "test": "node scripts/check-element-plus-registrations.mjs && vue-tsc --noEmit"
   },
   "dependencies": {
     "@ai-manage/client": "workspace:*",

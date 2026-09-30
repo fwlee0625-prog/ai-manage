@@ -30,6 +30,20 @@
 - Provider 健康状态支持 unknown / healthy / auth_error / unreachable / invalid_config，并补充状态映射测试。
 - 账号额度仍按方案定义为未来可选能力；本阶段不引入外部额度抓取或共享缓存。
 
+### 2026-09-20 浏览器验收与修复
+
+在 `http://127.0.0.1:5177/providers` 逐区块验收后修复：
+
+- 补齐 Element Plus 按需注册缺口，并加入注册扫描脚本作为 `check` 的一部分。
+- 修正 dev 模式加载过期 `packages/client/dist` 导致页面静默无数据的问题。
+- Codex 官方原生登录（live 无 `model_provider`）现在可导入、可匹配、可采用，走通 `unmanaged → synced`。
+- 统一 API 错误可读文案，Runtime 状态/认证/时间改由 shared 纯函数格式化。
+- UX 清单中的 Codex Provider 与 Switch 项已人工验证；**“切换” 按钮会写真实 `~/.codex`，本轮未点击**。
+- 仍未通过：ChatGPT 托管账号 Device Flow。上游 `POST {issuer}/api/accounts/deviceauth/usercode` 返回 HTTP 403，弹窗进入 failed 态。属于外部网络/租户条件，需要换网络或补充可用 client_id 后复测；`accounts` 与 OAuth 相关单元测试本身通过。
+- 已知非缺陷：Codex 原生登录缺少邮箱时，runtime 账号摘要展示账户 ID（UUID）。按“敏感内容原样展示、不做默认脱敏”的产品要求保留。
+- 删除 Phase 5 遗留的 `ModelProviderManager.vue` 后，`pnpm check` / `pnpm test` / `pnpm build` 复跑全部通过，`/providers` 及其余路由浏览器复测无 error。
+- Provider 卡片的「上移 / 下移」入口按需求移除（前端 `moveUp/moveDown`、`reorder` 链路一并清理）。后端 `PATCH /api/providers/reorder` 与 `sort_index` 保留，Phase 6 的持久排序能力仍在，只是暂时由创建 / 导入顺序决定展示次序；后续要拖拽排序可直接复用该接口。
+
 ### Phase 5 验收记录
 
 - RuntimeDetector 已覆盖 `synced`、`externally_modified`、`unmanaged`、`auth_invalid`、`reauth_required`。
@@ -1541,6 +1555,8 @@ apps/web/src/features/configs/components/ModelProviderManager.vue
 ~~~
 
 是否删除取决于新页面是否完全替代；不要提前删除。
+
+> 2026-09-20：新页面已完全替代该组件，且它引用了 Phase 5 已移除的 `use-configs` 类型导致 `vue-tsc` 失败，已删除。
 
 ---
 

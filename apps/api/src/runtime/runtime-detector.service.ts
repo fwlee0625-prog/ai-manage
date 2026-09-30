@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { AiProviderProfile, AiTool, RuntimeSummary, RuntimeSyncStatus } from '@ai-manage/shared';
 import { AccountsRepository } from '../accounts/accounts.repository.js';
-import { providerLiveKey } from '../projections/projection.types.js';
+import { codexLiveProviderKey, providerLiveKey } from '../projections/projection.types.js';
 import { ProvidersRepository } from '../providers/providers.repository.js';
 import { LiveFileWriterService, type RuntimeLiveState } from './live-file-writer.service.js';
 import { RuntimeRepository } from './runtime.repository.js';
@@ -118,7 +118,7 @@ export class RuntimeDetectorService {
   private matchesLive(tool: AiTool, provider: AiProviderProfile, live: RuntimeLiveState): boolean {
     const config = live.config;
     if (tool === 'codex') {
-      const liveKey = scalar(config.model_provider);
+      const liveKey = codexLiveProviderKey(config.model_provider);
       if (liveKey !== providerLiveKey(provider)) return false;
       if (provider.defaultModel && scalar(config.model) !== provider.defaultModel) return false;
       if (provider.reasoningEffort && scalar(config.model_reasoning_effort) !== provider.reasoningEffort) return false;

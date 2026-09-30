@@ -47,7 +47,10 @@ export class ProvidersService {
       id, tool: body.tool, name, providerType,
       endpoint: clean(body.endpoint ?? preset?.endpoint), apiProtocol: clean(body.apiProtocol ?? preset?.apiProtocol),
       defaultModel: clean(body.defaultModel ?? preset?.defaultModel), reasoningEffort: clean(body.reasoningEffort),
-      authMode: body.authMode || preset?.authMode || 'none', accountId: clean(body.accountId), credentialId: clean(credentialId),
+      // An inline API Key only has an effect while the provider authenticates with a key, so an
+      // unset auth mode infers `api_key` instead of silently discarding the stored credential.
+      authMode: body.authMode || preset?.authMode || (credentialId ? 'api_key' : 'none'),
+      accountId: clean(body.accountId), credentialId: clean(credentialId),
       sortIndex: (await this.repository.list(body.tool)).length, metadata, createdAt: now, updatedAt: now,
     };
     await this.validate(provider);

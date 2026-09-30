@@ -1,27 +1,48 @@
 import { Injectable } from '@nestjs/common';
 import type { AiProviderProfile, AiTool, CreateProviderRequest, ImportProvidersResponse } from '@ai-manage/shared';
 import { ConfigsService } from '../routes/configs.service.js';
+import { CODEX_OFFICIAL_LIVE_KEY, codexLiveProviderKey } from '../projections/projection.types.js';
 import { ProvidersService } from './providers.service.js';
 
 interface ImportCandidate extends CreateProviderRequest { sourceKey: string; }
 
-/** Extracts Codex provider candidates from parsed config. */
+/**
+ * Extracts Codex provider candidates from parsed config.
+ *
+ * A Codex install that only talks to OpenAI keeps `model_provider` / `model_providers`
+ * out of config.toml entirely. That native login state is still a legal runtime, so it is
+ * surfaced as one OpenAI Official candidate instead of importing nothing.
+ */
 export function extractCodexProviderCandidates(parsed: unknown): ImportCandidate[] {
   if (!isRecord(parsed)) return [];
   const providers = isRecord(parsed.model_providers) ? parsed.model_providers : {};
-  const activeKey = scalar(parsed.model_provider);
+  const activeKey = scalar(parsed.model_provider) || CODEX_OFFICIAL_LIVE_KEY;
   const model = scalar(parsed.model);
   const reasoning = scalar(parsed.model_reasoning_effort);
-  return Object.entries(providers).map(([key, raw]) => {
+  const candidates = Object.entries(providers).map(([key, raw]) => {
     const value = isRecord(raw) ? raw : {};
     return {
-      sourceKey: key, tool: 'codex', name: scalar(value.name) || key, providerType: key,
+      sourceKey: key, tool: 'codex' as const, name: scalar(value.name) || key, providerType: key,
       endpoint: scalar(value.base_url || value.baseUrl), apiProtocol: scalar(value.wire_api || value.wireApi),
       defaultModel: key === activeKey ? model : undefined, reasoningEffort: key === activeKey ? reasoning : undefined,
-      authMode: key === 'openai' ? 'native_login' : 'api_key',
+      authMode: key === CODEX_OFFICIAL_LIVE_KEY ? 'native_login' as const : 'api_key' as const,
       metadata: { importSource: 'codex-live', importSourceKey: key },
     };
   });
+  if (activeKey !== CODEX_OFFICIAL_LIVE_KEY || candidates.some(item => item.sourceKey === CODEX_OFFICIAL_LIVE_KEY)) {
+    return candidates;
+  }
+  return [
+    ...candidates,
+    {
+      // The official entry intentionally keeps endpoint/protocol empty so adopting it never
+      // rewrites the tool's own OpenAI defaults into config.toml.
+      sourceKey: CODEX_OFFICIAL_LIVE_KEY, tool: 'codex', name: 'OpenAI Official',
+      providerType: CODEX_OFFICIAL_LIVE_KEY, endpoint: '', apiProtocol: '',
+      defaultModel: model, reasoningEffort: reasoning, authMode: 'native_login',
+      metadata: { importSource: 'codex-live', importSourceKey: CODEX_OFFICIAL_LIVE_KEY, official: true },
+    },
+  ];
 }
 
 /** Extracts Claude's env-backed provider candidate. */
@@ -54,8 +75,8 @@ export class ProviderImportService {
       const config = details.find(item => item.name === 'config.toml');
       const parsed = config?.formModel ?? config?.parsed;
       candidates = extractCodexProviderCandidates(parsed);
-      const activeKey = isRecord(parsed) ? scalar(parsed.model_provider) : '';
-      if (activeKey && activeKey !== 'openai') {
+      const activeKey = codexLiveProviderKey(isRecord(parsed) ? parsed.model_provider : undefined);
+      if (activeKey !== CODEX_OFFICIAL_LIVE_KEY) {
         const key = await this.configs.codexOpenAiApiKey();
         if (key.exists && key.openaiApiKey) candidates = candidates.map(item => item.sourceKey === activeKey ? { ...item, apiKey: key.openaiApiKey } : item);
       }

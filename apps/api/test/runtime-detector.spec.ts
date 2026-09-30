@@ -33,4 +33,27 @@ describe('RuntimeDetectorService', () => {
     const detector = new RuntimeDetectorService(writer as never, providers as never, runtime as never, accounts as never);
     expect((await detector.summary('codex')).syncStatus).toBe('reauth_required');
   });
+
+  it('treats a config without model_provider as the implicit official provider', async () => {
+    const official: AiProviderProfile = {
+      id: 'p-official',
+      tool: 'codex',
+      name: 'OpenAI Official',
+      providerType: 'openai',
+      defaultModel: 'gpt-test',
+      authMode: 'native_login',
+      metadata: { importSourceKey: 'openai' },
+      createdAt: 'now',
+      updatedAt: 'now',
+    };
+    const writer = { readLive: async () => ({ config: { model: 'gpt-test' }, auth: { auth_mode: 'chatgpt', tokens: {} } }) };
+    const providers = { list: async () => [official] };
+    const runtime = { active: async () => ({ tool: 'codex', providerId: 'p-official', switchedAt: 'now' }) };
+    const accounts = { get: async () => undefined };
+    const detector = new RuntimeDetectorService(writer as never, providers as never, runtime as never, accounts as never);
+
+    const summary = await detector.summary('codex');
+    expect(summary.actualProviderMatchId).toBe('p-official');
+    expect(summary.syncStatus).toBe('synced');
+  });
 });

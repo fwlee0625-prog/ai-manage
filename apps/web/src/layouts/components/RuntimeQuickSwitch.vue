@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import type { AiProviderProfile, RuntimeSummary, SwitchHistoryEntry } from '@ai-manage/shared';
+import { runtimeSyncStatusLabel } from '@ai-manage/shared';
 import { api } from '../../api';
 import { selectedTool } from '../../state/app-state';
 
@@ -91,7 +92,7 @@ watch(selectedTool, () => void load(), { immediate: true });
           <p>{{ summaryLabel }}</p>
         </div>
         <el-tag :type="runtime?.syncStatus === 'synced' ? 'success' : 'warning'" size="small">
-          {{ runtime?.syncStatus || 'loading' }}
+          {{ runtime ? runtimeSyncStatusLabel(runtime.syncStatus) : '加载中' }}
         </el-tag>
       </header>
 

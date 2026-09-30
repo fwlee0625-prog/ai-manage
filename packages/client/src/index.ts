@@ -174,8 +174,29 @@ async function request<T>(
     ...init,
   });
   if (!response.ok) {
-    throw new Error(await response.text());
+    throw new Error(toRequestErrorMessage(await response.text(), response.status));
   }
   const text = await response.text();
   return (text ? JSON.parse(text) : undefined) as T;
+}
+
+/**
+ * Turns a failed response body into a message safe to show end users.
+ *
+ * The API reports business failures as NestJS JSON envelopes, so the human readable
+ * `message` field is surfaced instead of leaking the raw JSON payload to the UI.
+ */
+function toRequestErrorMessage(body: string, status: number): string {
+  const trimmed = body.trim();
+  if (!trimmed) return `请求失败（HTTP ${status}）`;
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return trimmed;
+  try {
+    const parsed = JSON.parse(trimmed) as { message?: unknown; error?: unknown };
+    const message = Array.isArray(parsed.message)
+      ? parsed.message.filter(item => typeof item === 'string' && item.trim()).join('；')
+      : typeof parsed.message === 'string' ? parsed.message.trim() : '';
+    return message || `请求失败（HTTP ${status}）`;
+  } catch {
+    return trimmed;
+  }
 }

@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import type { AiProviderProfile, ProviderHealthStatus } from '@ai-manage/shared';
+import { runtimeAuthModeLabel, type AiProviderProfile, type ProviderHealthStatus } from '@ai-manage/shared';
 
 defineProps<{
   provider: AiProviderProfile;
   active?: boolean;
   switching?: boolean;
   healthStatus?: ProviderHealthStatus;
-  canMoveUp?: boolean;
-  canMoveDown?: boolean;
 }>();
-defineEmits<{ switch: []; edit: []; duplicate: []; test: []; remove: []; moveUp: []; moveDown: [] }>();
+defineEmits<{ switch: []; edit: []; duplicate: []; test: []; remove: [] }>();
 
 function healthLabel(status: ProviderHealthStatus = 'unknown') {
   return {
@@ -39,11 +37,9 @@ function healthType(status: ProviderHealthStatus = 'unknown'): 'success' | 'info
     <dl>
       <div><dt>模型</dt><dd>{{ provider.defaultModel || '未配置' }}</dd></div>
       <div><dt>Endpoint</dt><dd class="mono">{{ provider.endpoint || '默认' }}</dd></div>
-      <div><dt>认证</dt><dd>{{ provider.authMode }} · {{ provider.credential?.configured ? '凭据已配置' : '无托管凭据' }}</dd></div>
+      <div><dt>认证</dt><dd>{{ runtimeAuthModeLabel(provider.authMode) }} · {{ provider.credential?.configured ? '凭据已配置' : '无托管凭据' }}</dd></div>
     </dl>
     <footer>
-      <el-button size="small" :disabled="!canMoveUp" @click="$emit('moveUp')">上移</el-button>
-      <el-button size="small" :disabled="!canMoveDown" @click="$emit('moveDown')">下移</el-button>
       <el-button size="small" @click="$emit('edit')">编辑</el-button>
       <el-button size="small" @click="$emit('test')">测试</el-button>
       <el-dropdown>
